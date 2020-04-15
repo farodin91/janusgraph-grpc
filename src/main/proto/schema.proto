@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package grpc;
+
+option java_multiple_files = true;
+option java_package = "org.janusgraph.grpc";
+option java_outer_classname = "SchemaProto";
+
+message VertexProperty {
+    int64 id = 1;
+    string name = 2;
+}
+
+message VertexLabel {
+    int64 id = 1;
+    string name = 2;
+    repeated VertexProperty properties = 3;
+}
+
+message JanusGraphContext {
+    string graphName = 1;
+}
+
+message GetVertexLabelsByNameRequest {
+    JanusGraphContext context = 1;
+    string name = 2;
+}
+
+message EnsureVertexLabelRequest {
+    JanusGraphContext context = 1;
+    VertexLabel label = 2;
+}
+
+message GetVertexLabelsRequest {
+    JanusGraphContext context = 1;
+}
+
+message EdgeProperty {
+    int64 id = 1;
+    string name = 2;
+}
+
+message EdgeLabel {
+    int64 id = 1;
+    string name = 2;
+    repeated EdgeProperty properties = 3;
+    enum Direction {
+        BOTH = 0;
+        OUT = 1;
+    }
+    Direction direction = 4;
+}
+
+message GetEdgeLabelsByNameRequest {
+    JanusGraphContext context = 1;
+    string name = 2;
+}
+
+message EnsureEdgeLabelRequest {
+    JanusGraphContext context = 1;
+    EdgeLabel label = 2;
+}
+
+message GetEdgeLabelsRequest {
+    JanusGraphContext context = 1;
+}
+
+service SchemaAccess {
+    rpc GetVertexLabels (GetVertexLabelsRequest) returns (stream VertexLabel);
+    rpc GetVertexLabelsByName (GetVertexLabelsByNameRequest) returns (stream VertexLabel);
+    rpc EnsureVertexLabel (EnsureVertexLabelRequest) returns (VertexLabel);
+    rpc GetEdgeLabels (GetEdgeLabelsRequest) returns (stream EdgeLabel);
+    rpc GetEdgeLabelsByName (GetEdgeLabelsByNameRequest) returns (stream EdgeLabel);
+    rpc EnsureEdgeLabel (EnsureEdgeLabelRequest) returns (EdgeLabel);
+}
