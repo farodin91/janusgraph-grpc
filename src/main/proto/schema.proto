@@ -2,17 +2,36 @@ syntax = "proto3";
 
 package grpc;
 
+import "google/protobuf/wrappers.proto";
+
 option java_multiple_files = true;
 option java_package = "org.janusgraph.grpc";
 option java_outer_classname = "SchemaProto";
 
+enum PropertyDataType {
+    String = 0;
+    Character = 1;
+    Boolean = 2;
+    Int8 = 3;
+    Int16 = 4;
+    Int32 = 5;
+    Int64 = 6;
+    Float32 = 7;
+    Float64 = 8;
+    Date = 9;
+    JavaObject = 10;
+    GeoShape = 11;
+    Uuid = 12;
+}
+
 message VertexProperty {
-    int64 id = 1;
+    google.protobuf.Int64Value id = 1;
     string name = 2;
+    PropertyDataType DataType = 3;
 }
 
 message VertexLabel {
-    int64 id = 1;
+    google.protobuf.Int64Value id = 1;
     string name = 2;
     repeated VertexProperty properties = 3;
 }
@@ -36,12 +55,13 @@ message GetVertexLabelsRequest {
 }
 
 message EdgeProperty {
-    int64 id = 1;
+    google.protobuf.Int64Value id = 1;
     string name = 2;
+    PropertyDataType DataType = 3;
 }
 
 message EdgeLabel {
-    int64 id = 1;
+    google.protobuf.Int64Value id = 1;
     string name = 2;
     repeated EdgeProperty properties = 3;
     enum Direction {

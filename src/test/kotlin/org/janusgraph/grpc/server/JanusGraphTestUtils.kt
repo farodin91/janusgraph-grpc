@@ -10,6 +10,8 @@ class JanusGraphTestUtils {
         private fun getConfiguration(): ModifiableConfiguration? {
             val config = GraphDatabaseConfiguration.buildGraphConfiguration()
             config.set(GraphDatabaseConfiguration.STORAGE_BACKEND, "inmemory")
+            config.set(GraphDatabaseConfiguration.AUTO_TYPE, "none")
+            config.set(GraphDatabaseConfiguration.SCHEMA_CONSTRAINTS, true)
             return config
         }
 
