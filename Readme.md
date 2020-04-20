@@ -1,7 +1,10 @@
 # Potential Replacement of JanusGraph ManagementSystem
 
 
-# Current State
+## Current State
+
+### Vertices
+
 * [x] Get Vertex
     * [x] id
     * [x] name
@@ -88,6 +91,9 @@
         * [ ] multiple indices
         * [ ] unique
         * [ ] backend
+
+### Edges
+
 * [x] Get Edge
     * [x] id
     * [x] name
@@ -166,13 +172,21 @@
         * [ ] multiple indices
         * [ ] unique
         * [ ] backend
+
+### Indices
+
 * [ ] Get Relation Indices
 * [ ] Ensure Relation Indices (create)
 * [ ] Ensure Relation Indices (update)
 * [ ] Index Repair's
+
+### Instances
+
 * [ ] Management Instances (status, config, close)
 * [ ] global Configuration
-* [ ] ConsistencyModifier
+
+### Integrations 
+
 * [ ] Distributed tests 
     * [ ] vertexLabel changes
     * [ ] edgeLabel changes
@@ -180,3 +194,7 @@
     * [ ] index changes
 * [ ] DefaultJanusGraphManager with Grpc server
 * [ ] ContextManager should support ConfigureGraphFactory
+
+### Unsorted
+
+* [ ] ConsistencyModifier
