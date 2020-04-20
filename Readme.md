@@ -166,27 +166,9 @@
         * [ ] multiple indices
         * [ ] unique
         * [ ] backend
-* [ ] Get Indices
-    * vertex centric index
-        * composite
-        * mixed
-    * edge centric index
-        * composite
-        * mixed
-* [ ] Ensure Indices (create)
-    * vertex centric index
-        * composite
-        * mixed
-    * edge centric index
-        * composite
-        * mixed
-* [ ] Ensure Indices (update)
-    * vertex centric index
-        * composite
-        * mixed
-    * edge centric index
-        * composite
-        * mixed
+* [ ] Get Relation Indices
+* [ ] Ensure Relation Indices (create)
+* [ ] Ensure Relation Indices (update)
 * [ ] Index Repair's
 * [ ] Management Instances (status, config, close)
 * [ ] global Configuration
