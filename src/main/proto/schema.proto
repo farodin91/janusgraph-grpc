@@ -27,13 +27,21 @@ enum PropertyDataType {
 message VertexProperty {
     google.protobuf.Int64Value id = 1;
     string name = 2;
-    PropertyDataType DataType = 3;
+    PropertyDataType dataType = 3;
+    enum Cardinality {
+        Single = 0;
+        List = 1;
+        Set = 2;
+    }
+    Cardinality cardinality = 4;
 }
 
 message VertexLabel {
     google.protobuf.Int64Value id = 1;
     string name = 2;
     repeated VertexProperty properties = 3;
+    bool readOnly = 4;
+    bool partitioned = 5;
 }
 
 message JanusGraphContext {
@@ -57,7 +65,7 @@ message GetVertexLabelsRequest {
 message EdgeProperty {
     google.protobuf.Int64Value id = 1;
     string name = 2;
-    PropertyDataType DataType = 3;
+    PropertyDataType dataType = 3;
 }
 
 message EdgeLabel {
@@ -69,6 +77,14 @@ message EdgeLabel {
         OUT = 1;
     }
     Direction direction = 4;
+    enum Multiplicity {
+        Multi = 0;
+        Simple = 1;
+        One2Many = 2;
+        Many2One = 3;
+        One2One = 4;
+    }
+    Multiplicity multiplicity = 5;
 }
 
 message GetEdgeLabelsByNameRequest {
@@ -85,11 +101,113 @@ message GetEdgeLabelsRequest {
     JanusGraphContext context = 1;
 }
 
-service SchemaAccess {
+//message GetOutgoingEdgesByVertexLabelRequest {
+//    JanusGraphContext context = 1;
+//    VertexLabel fromVertex = 2;
+//}
+//
+//message GetIncomingEdgesByVertexLabelRequest {
+//    JanusGraphContext context = 1;
+//    VertexLabel toVertex = 2;
+//}
+
+message CompositeVertexIndex {
+    google.protobuf.Int64Value id = 1;
+    string name = 2;
+    repeated VertexProperty properties = 3;
+    bool unique = 4;
+}
+
+message GetCompositeVertexIndicesByVertexLabelRequest {
+    JanusGraphContext context = 1;
+    VertexLabel vertexLabel = 2;
+}
+
+message EnsureCompositeVertexIndexByVertexLabelRequest {
+    JanusGraphContext context = 1;
+    VertexLabel vertexLabel = 2;
+    CompositeVertexIndex index = 3;
+}
+
+message MixedVertexIndex {
+    google.protobuf.Int64Value id = 1;
+    string name = 2;
+    repeated VertexProperty properties = 3;
+    bool unique = 4;
+    string backend = 5;
+}
+
+message GetMixedVertexIndicesByVertexLabelRequest {
+    JanusGraphContext context = 1;
+    VertexLabel vertexLabel = 2;
+}
+
+message EnsureMixedVertexIndexByVertexLabelRequest {
+    JanusGraphContext context = 1;
+    VertexLabel vertexLabel = 2;
+    MixedVertexIndex index = 3;
+}
+
+
+message CompositeEdgeIndex {
+    google.protobuf.Int64Value id = 1;
+    string name = 2;
+    repeated EdgeProperty properties = 3;
+    bool unique = 4;
+}
+
+message GetCompositeEdgeIndicesByEdgeLabelRequest {
+    JanusGraphContext context = 1;
+    EdgeLabel edgeLabel = 2;
+}
+
+message EnsureCompositeEdgeIndexByVertexLabelRequest {
+    JanusGraphContext context = 1;
+    EdgeLabel edgeLabel = 2;
+    CompositeEdgeIndex index = 3;
+}
+
+message MixedEdgeIndex {
+    google.protobuf.Int64Value id = 1;
+    string name = 2;
+    repeated EdgeProperty properties = 3;
+    bool unique = 4;
+    string backend = 5;
+}
+
+message GetMixedEdgeIndicesByEdgeLabelRequest {
+    JanusGraphContext context = 1;
+    EdgeLabel edgeLabel = 2;
+}
+
+message EnsureMixedEdgeIndexByVertexLabelRequest {
+    JanusGraphContext context = 1;
+    EdgeLabel edgeLabel = 2;
+    MixedEdgeIndex index = 3;
+}
+
+
+service ManagementServer {
     rpc GetVertexLabels (GetVertexLabelsRequest) returns (stream VertexLabel);
     rpc GetVertexLabelsByName (GetVertexLabelsByNameRequest) returns (stream VertexLabel);
     rpc EnsureVertexLabel (EnsureVertexLabelRequest) returns (VertexLabel);
+
+    rpc GetCompositeVertexIndicesByVertexLabel (GetCompositeVertexIndicesByVertexLabelRequest) returns (stream CompositeVertexIndex);
+    rpc EnsureCompositeVertexIndexByVertexLabel (EnsureCompositeVertexIndexByVertexLabelRequest) returns (CompositeVertexIndex);
+
+    rpc GetMixedVertexIndicesByVertexLabel (GetMixedVertexIndicesByVertexLabelRequest) returns (stream MixedVertexIndex);
+    rpc EnsureMixedVertexIndexByVertexLabel (EnsureMixedVertexIndexByVertexLabelRequest) returns (MixedVertexIndex);
+
+    //rpc GetOutgoingEdgesByVertexLabel(GetOutgoingEdgesByVertexLabelRequest) returns (stream EdgeLabel);
+    //rpc GetIncomingEdgesByVertexLabel(GetIncomingEdgesByVertexLabelRequest) returns (stream EdgeLabel);
+
     rpc GetEdgeLabels (GetEdgeLabelsRequest) returns (stream EdgeLabel);
     rpc GetEdgeLabelsByName (GetEdgeLabelsByNameRequest) returns (stream EdgeLabel);
     rpc EnsureEdgeLabel (EnsureEdgeLabelRequest) returns (EdgeLabel);
+
+    rpc GetCompositeEdgeIndicesByEdgeLabel (GetCompositeEdgeIndicesByEdgeLabelRequest) returns (stream CompositeEdgeIndex);
+    rpc EnsureCompositeEdgeIndexByVertexLabel (EnsureCompositeEdgeIndexByVertexLabelRequest) returns (CompositeEdgeIndex);
+
+    rpc GetMixedEdgeIndicesByEdgeLabel (GetMixedEdgeIndicesByEdgeLabelRequest) returns (stream MixedEdgeIndex);
+    rpc EnsureMixedEdgeIndexByVertexLabel (EnsureMixedEdgeIndexByVertexLabelRequest) returns (MixedEdgeIndex);
 }

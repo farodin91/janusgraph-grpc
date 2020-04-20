@@ -29,9 +29,15 @@ class ManagementServerTests {
         graphName: String = "first",
         name: String = "test",
         vertexId: Long? = null,
-        properties: List<VertexProperty> = emptyList()
+        properties: List<VertexProperty> = emptyList(),
+        readOnly: Boolean = false,
+        partitioned: Boolean = false
     ): EnsureVertexLabelRequest {
-        val vertexLabelBuilder = VertexLabel.newBuilder().setName(name).addAllProperties(properties)
+        val vertexLabelBuilder = VertexLabel.newBuilder()
+            .setName(name)
+            .addAllProperties(properties)
+            .setReadOnly(readOnly)
+            .setPartitioned(partitioned)
         if (vertexId != null) {
             vertexLabelBuilder.id = Int64Value.of(vertexId)
         }
@@ -40,6 +46,12 @@ class ManagementServerTests {
             .setLabel(vertexLabelBuilder.build())
             .build()
     }
+
+    private fun getVertexLabelsByNameRequest(graphName: String = "first", name: String = "test") =
+        GetVertexLabelsByNameRequest.newBuilder()
+            .setContext(createContext(graphName))
+            .setName(name)
+            .build()
 
     private fun ensureBasicEdgeLabelRequest(
         graphName: String = "first",
@@ -66,6 +78,28 @@ class ManagementServerTests {
         val vertexLabel = managementServer.ensureVertexLabel(request)
 
         assertEquals("test", vertexLabel?.name)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["first", "second"])
+    fun `ensureVertexLabel vertexLabel marked as readOnly`(graphName: String) {
+        val managementServer = createManagementServer()
+        val request = ensureBasicVertexLabelRequest(graphName, readOnly = true)
+
+        val vertexLabel = managementServer.ensureVertexLabel(request)
+
+        assertTrue(vertexLabel?.readOnly!!)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["first", "second"])
+    fun `ensureVertexLabel vertexLabel marked as partitioned`(graphName: String) {
+        val managementServer = createManagementServer()
+        val request = ensureBasicVertexLabelRequest(graphName, partitioned = true)
+
+        val vertexLabel = managementServer.ensureVertexLabel(request)
+
+        assertTrue(vertexLabel?.partitioned!!)
     }
 
     @ParameterizedTest
@@ -112,6 +146,23 @@ class ManagementServerTests {
     }
 
     @ParameterizedTest
+    @EnumSource(VertexProperty.Cardinality::class, mode = EnumSource.Mode.EXCLUDE, names = ["UNRECOGNIZED"])
+    fun `ensureVertexLabel creates property`(propertyCardinality: VertexProperty.Cardinality) {
+        val managementServer = createManagementServer()
+        val propertyName = "propertyName"
+        val property = VertexProperty.newBuilder()
+            .setName(propertyName)
+            .setDataType(PropertyDataType.String)
+            .setCardinality(propertyCardinality)
+            .build()
+        val request = ensureBasicVertexLabelRequest(name = "edgeName", properties = listOf(property))
+
+        val vertexLabel = managementServer.ensureVertexLabel(request)
+
+        assertEquals(propertyCardinality, vertexLabel?.propertiesList?.firstOrNull()?.cardinality)
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["first", "second"])
     fun `ensureVertexLabel can run multiple times with same properties`(graphName: String) {
         val managementServer = createManagementServer()
@@ -134,9 +185,7 @@ class ManagementServerTests {
     @ValueSource(strings = ["first", "second"])
     fun `getVertexLabelsByName no vertexLabel exists`(graphName: String) {
         val managementServer = createManagementServer()
-        val request = GetVertexLabelsByNameRequest.newBuilder()
-            .setContext(createContext(graphName))
-            .setName("test").build()
+        val request = getVertexLabelsByNameRequest(graphName, "test")
 
         val vertexLabel = managementServer.getVertexLabelsByName(request).firstOrNull()
 
@@ -149,13 +198,35 @@ class ManagementServerTests {
         val managementServer = createManagementServer()
         val label = "test"
         managementServer.ensureVertexLabel(ensureBasicVertexLabelRequest(graphName, label))
-        val request = GetVertexLabelsByNameRequest.newBuilder()
-            .setContext(createContext(graphName))
-            .setName(label).build()
+        val request = getVertexLabelsByNameRequest(graphName, label)
 
         val vertexLabel = managementServer.getVertexLabelsByName(request).firstOrNull()
 
         assertEquals(label, vertexLabel?.name)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["first", "second"])
+    fun `getVertexLabelsByName vertexLabel marked as readOnly`(graphName: String) {
+        val managementServer = createManagementServer()
+        managementServer.ensureVertexLabel(ensureBasicVertexLabelRequest(graphName, readOnly = true))
+        val request = getVertexLabelsByNameRequest(graphName)
+
+        val vertexLabel = managementServer.getVertexLabelsByName(request).firstOrNull()
+
+        assertTrue(vertexLabel?.readOnly!!)
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["first", "second"])
+    fun `getVertexLabelsByName vertexLabel marked as partitioned`(graphName: String) {
+        val managementServer = createManagementServer()
+        managementServer.ensureVertexLabel(ensureBasicVertexLabelRequest(graphName, partitioned = true))
+        val request = getVertexLabelsByNameRequest(graphName)
+
+        val vertexLabel = managementServer.getVertexLabelsByName(request).firstOrNull()
+
+        assertTrue(vertexLabel?.partitioned!!)
     }
 
     @Test
@@ -163,9 +234,7 @@ class ManagementServerTests {
         val managementServer = createManagementServer()
         val label = "test"
         managementServer.ensureVertexLabel(ensureBasicVertexLabelRequest("first", label))
-        val request = GetVertexLabelsByNameRequest.newBuilder()
-            .setContext(createContext("second"))
-            .setName(label).build()
+        val request = getVertexLabelsByNameRequest("second", label)
 
         val vertexLabel = managementServer.getVertexLabelsByName(request).firstOrNull()
 
@@ -180,9 +249,7 @@ class ManagementServerTests {
         val ensureEdgeLabel = managementServer.ensureVertexLabel(request1)
         val request2 = ensureBasicVertexLabelRequest(graphName, "test2", ensureEdgeLabel?.id?.value)
         managementServer.ensureVertexLabel(request2)
-        val request = GetVertexLabelsByNameRequest.newBuilder()
-            .setContext(createContext(graphName))
-            .setName("test2").build()
+        val request = getVertexLabelsByNameRequest(graphName, "test2")
 
         val vertexLabel = managementServer.getVertexLabelsByName(request).firstOrNull()
 
@@ -199,15 +266,29 @@ class ManagementServerTests {
         managementServer.ensureVertexLabel(
             ensureBasicVertexLabelRequest(name = "test", properties = listOf(property))
         )
-        val request = GetVertexLabelsByNameRequest.newBuilder()
-            .setContext(createContext("first"))
-            .setName("test").build()
+        val request = getVertexLabelsByNameRequest(name = "test")
 
         val vertexLabel = managementServer.getVertexLabelsByName(request).firstOrNull()
 
         assertEquals(1, vertexLabel?.propertiesCount)
         assertEquals(propertyName, vertexLabel?.propertiesList?.firstOrNull()?.name)
         assertEquals(propertyDataType, vertexLabel?.propertiesList?.firstOrNull()?.dataType)
+    }
+
+    @ParameterizedTest
+    @EnumSource(VertexProperty.Cardinality::class, mode = EnumSource.Mode.EXCLUDE, names = ["UNRECOGNIZED"])
+    fun `getVertexLabelsByName returns property`(propertyCardinality: VertexProperty.Cardinality) {
+        val managementServer = createManagementServer()
+        val propertyName = "propertyName"
+        val property = VertexProperty.newBuilder().setName(propertyName).setCardinality(propertyCardinality).build()
+        managementServer.ensureVertexLabel(
+            ensureBasicVertexLabelRequest(name = "vertexName", properties = listOf(property))
+        )
+        val request = getVertexLabelsByNameRequest(name = "vertexName")
+
+        val vertexLabel = managementServer.getVertexLabelsByName(request).firstOrNull()
+
+        assertEquals(propertyCardinality, vertexLabel?.propertiesList?.firstOrNull()?.cardinality)
     }
 
     @ParameterizedTest
@@ -242,7 +323,11 @@ class ManagementServerTests {
     fun `getVertexLabels returns multiple vertexLabels with property`(graphName: String) {
         val managementServer = createManagementServer()
         val propertyName = "name"
-        val property = VertexProperty.newBuilder().setName(propertyName).setDataType(PropertyDataType.Boolean).build()
+        val property = VertexProperty.newBuilder()
+            .setName(propertyName)
+            .setDataType(PropertyDataType.Boolean)
+            .setCardinality(VertexProperty.Cardinality.List)
+            .build()
         managementServer.ensureVertexLabel(
             ensureBasicVertexLabelRequest(graphName, name = "test1", properties = listOf(property))
         )
@@ -252,13 +337,38 @@ class ManagementServerTests {
         val request = GetVertexLabelsRequest.newBuilder().setContext(createContext(graphName)).build()
 
         val vertexLabels = managementServer.getVertexLabels(request)
+        val vertexLabel1 = vertexLabels.firstOrNull { it.name == "test1" }
+        val vertexLabel2 = vertexLabels.firstOrNull { it.name == "test2" }
+        assertEquals(1, vertexLabel1?.propertiesCount)
+        assertEquals(1, vertexLabel2?.propertiesCount)
+        assertEquals(propertyName, vertexLabel1?.propertiesList?.firstOrNull()?.name)
+        assertEquals(propertyName, vertexLabel2?.propertiesList?.firstOrNull()?.name)
+        assertEquals(PropertyDataType.Boolean, vertexLabel1?.propertiesList?.firstOrNull()?.dataType)
+        assertEquals(PropertyDataType.Boolean, vertexLabel2?.propertiesList?.firstOrNull()?.dataType)
+        assertEquals(VertexProperty.Cardinality.List, vertexLabel1?.propertiesList?.firstOrNull()?.cardinality)
+        assertEquals(VertexProperty.Cardinality.List, vertexLabel2?.propertiesList?.firstOrNull()?.cardinality)
+    }
 
-        assertEquals(1, vertexLabels.firstOrNull { it.name == "test1" }?.propertiesCount)
-        assertEquals(1, vertexLabels.firstOrNull { it.name == "test2" }?.propertiesCount)
-        assertEquals(propertyName, vertexLabels.firstOrNull { it.name == "test1" }?.propertiesList?.firstOrNull()?.name)
-        assertEquals(propertyName, vertexLabels.firstOrNull { it.name == "test2" }?.propertiesList?.firstOrNull()?.name)
-        assertEquals(PropertyDataType.Boolean, vertexLabels.firstOrNull { it.name == "test1" }?.propertiesList?.firstOrNull()?.dataType)
-        assertEquals(PropertyDataType.Boolean, vertexLabels.firstOrNull { it.name == "test2" }?.propertiesList?.firstOrNull()?.dataType)
+    @Test
+    fun `getVertexLabels vertexLabel marked as readOnly`() {
+        val managementServer = createManagementServer()
+        managementServer.ensureVertexLabel(ensureBasicVertexLabelRequest(readOnly = true))
+        val request = GetVertexLabelsRequest.newBuilder().setContext(createContext()).build()
+
+        val vertexLabel = managementServer.getVertexLabels(request).firstOrNull()
+
+        assertTrue(vertexLabel?.readOnly!!)
+    }
+
+    @Test
+    fun `getVertexLabels vertexLabel marked as partitioned`() {
+        val managementServer = createManagementServer()
+        managementServer.ensureVertexLabel(ensureBasicVertexLabelRequest(partitioned = true))
+        val request = GetVertexLabelsRequest.newBuilder().setContext(createContext()).build()
+
+        val vertexLabel = managementServer.getVertexLabels(request).firstOrNull()
+
+        assertTrue(vertexLabel?.partitioned!!)
     }
 
     @ParameterizedTest
@@ -439,30 +549,6 @@ class ManagementServerTests {
 
         assertNotNull(edgeLabels.firstOrNull { it.name == "edgeName1" })
         assertNotNull(edgeLabels.firstOrNull { it.name == "edgeName2" })
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = ["first", "second"])
-    fun `getEdgeLabels returns multiple edgeLabels with property`(graphName: String) {
-        val managementServer = createManagementServer()
-        val propertyName = "propertyName"
-        val property = EdgeProperty.newBuilder().setName(propertyName).setDataType(PropertyDataType.Boolean).build()
-        managementServer.ensureEdgeLabel(
-            ensureBasicEdgeLabelRequest(graphName, name = "edgeName1", properties = listOf(property))
-        )
-        managementServer.ensureEdgeLabel(
-            ensureBasicEdgeLabelRequest(graphName, name = "edgeName2", properties = listOf(property))
-        )
-        val request = GetEdgeLabelsRequest.newBuilder().setContext(createContext(graphName)).build()
-
-        val edgeLabels = managementServer.getEdgeLabels(request)
-
-        assertEquals(1, edgeLabels.firstOrNull { it.name == "edgeName1" }?.propertiesCount)
-        assertEquals(1, edgeLabels.firstOrNull { it.name == "edgeName2" }?.propertiesCount)
-        assertEquals(propertyName, edgeLabels.firstOrNull { it.name == "edgeName1" }?.propertiesList?.firstOrNull()?.name)
-        assertEquals(propertyName, edgeLabels.firstOrNull { it.name == "edgeName2" }?.propertiesList?.firstOrNull()?.name)
-        assertEquals(PropertyDataType.Boolean, edgeLabels.firstOrNull { it.name == "edgeName1" }?.propertiesList?.firstOrNull()?.dataType)
-        assertEquals(PropertyDataType.Boolean, edgeLabels.firstOrNull { it.name == "edgeName2" }?.propertiesList?.firstOrNull()?.dataType)
     }
 
 }

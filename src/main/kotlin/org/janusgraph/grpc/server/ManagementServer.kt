@@ -1,6 +1,7 @@
 package org.janusgraph.grpc.server
 
 import com.google.protobuf.Int64Value
+import org.janusgraph.core.Cardinality
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.attribute.Geoshape
 import org.janusgraph.core.schema.JanusGraphManagement
@@ -27,8 +28,8 @@ class ManagementServer(private val contextManager: ContextManager) {
             PropertyDataType.UNRECOGNIZED -> TODO()
         }
 
-    private fun convertJavaClassToDataType(dataType: Class<*>): PropertyDataType? {
-        return when (dataType) {
+    private fun convertJavaClassToDataType(dataType: Class<*>): PropertyDataType? =
+        when (dataType) {
             java.lang.String::class.java -> PropertyDataType.String
             java.lang.Character::class.java -> PropertyDataType.Character
             java.lang.Boolean::class.java -> PropertyDataType.Boolean
@@ -44,12 +45,28 @@ class ManagementServer(private val contextManager: ContextManager) {
             UUID::class.java -> PropertyDataType.Uuid
             else -> PropertyDataType.UNRECOGNIZED
         }
+
+    private fun convertCardinalityToJavaClass(cardinality: VertexProperty.Cardinality): Cardinality =
+        when (cardinality) {
+            VertexProperty.Cardinality.Single -> Cardinality.SINGLE
+            VertexProperty.Cardinality.List -> Cardinality.LIST
+            VertexProperty.Cardinality.Set -> Cardinality.SET
+            VertexProperty.Cardinality.UNRECOGNIZED -> TODO()
+        }
+
+    private fun convertJavaClassToCardinality(cardinality: Cardinality): VertexProperty.Cardinality? {
+        return when (cardinality) {
+            Cardinality.SINGLE -> VertexProperty.Cardinality.Single
+            Cardinality.LIST -> VertexProperty.Cardinality.List
+            Cardinality.SET -> VertexProperty.Cardinality.Set
+        }
     }
 
     private fun createVertexPropertyProto(property: PropertyKey): VertexProperty =
         VertexProperty.newBuilder()
             .setName(property.name())
             .setDataType(convertJavaClassToDataType(property.dataType()))
+            .setCardinality(convertJavaClassToCardinality(property.cardinality()))
             .build()
 
     private fun createVertexLabelProto(vertexLabel: org.janusgraph.core.VertexLabel, properties: List<PropertyKey>) =
@@ -57,6 +74,8 @@ class ManagementServer(private val contextManager: ContextManager) {
             .setId(Int64Value.of(vertexLabel.longId()))
             .setName(vertexLabel.name())
             .addAllProperties(properties.map { createVertexPropertyProto(it) })
+            .setPartitioned(vertexLabel.isPartitioned)
+            .setReadOnly(vertexLabel.isStatic)
             .build()
 
     private fun createEdgePropertyProto(property: PropertyKey): EdgeProperty =
@@ -97,6 +116,22 @@ class ManagementServer(private val contextManager: ContextManager) {
             management.getVertexLabel(vertexLabel.name)
         }
 
+    private fun getOrCreateVertexProperty(
+        management: JanusGraphManagement,
+        vertexLabel: org.janusgraph.core.VertexLabel,
+        property: VertexProperty
+    ): PropertyKey {
+        val propertyKey =
+            management.getPropertyKey(property.name) ?: management
+                .makePropertyKey(property.name)
+                .dataType(convertDataTypeToJavaClass(property.dataType))
+                .cardinality(convertCardinalityToJavaClass(property.cardinality))
+                .make()
+
+        management.addProperties(vertexLabel, propertyKey)
+        return propertyKey
+    }
+
     fun ensureVertexLabel(request: EnsureVertexLabelRequest): VertexLabel? {
         val management = contextManager.getManagement(request.context) ?: return null
         val requestLabel = request.label
@@ -108,27 +143,18 @@ class ManagementServer(private val contextManager: ContextManager) {
             management.changeName(label, requestLabel.name)
             label to emptyList()
         } else {
-            val vertexLabel = management.makeVertexLabel(requestLabel.name).make()
+            val vertexLabelMaker = management.makeVertexLabel(requestLabel.name)
+            if(requestLabel.readOnly)
+                vertexLabelMaker.setStatic()
+            if(requestLabel.partitioned)
+                vertexLabelMaker.partition()
+            val vertexLabel = vertexLabelMaker.make()
             vertexLabel to requestLabel.propertiesList
                 .map { getOrCreateVertexProperty(management, vertexLabel, it) }
         }
         val response = createVertexLabelProto(vertexLabel, properties)
         management.commit()
         return response
-    }
-
-    private fun getOrCreateVertexProperty(
-        management: JanusGraphManagement,
-        vertexLabel: org.janusgraph.core.VertexLabel,
-        property: VertexProperty
-    ): PropertyKey {
-        val propertyKey =
-            management.getPropertyKey(property.name) ?: management.makePropertyKey(property.name).dataType(
-                convertDataTypeToJavaClass(property.dataType)
-            ).make()
-
-        management.addProperties(vertexLabel, propertyKey)
-        return propertyKey
     }
 
     fun getEdgeLabelsByName(request: GetEdgeLabelsByNameRequest): List<EdgeLabel> {
@@ -185,9 +211,10 @@ class ManagementServer(private val contextManager: ContextManager) {
         property: EdgeProperty
     ): PropertyKey {
         val propertyKey =
-            management.getPropertyKey(property.name) ?: management.makePropertyKey(property.name).dataType(
-                convertDataTypeToJavaClass(property.dataType)
-            ).make()
+            management.getPropertyKey(property.name) ?: management
+                .makePropertyKey(property.name)
+                .dataType(convertDataTypeToJavaClass(property.dataType))
+                .make()
 
         management.addProperties(vertexLabel, propertyKey)
         return propertyKey
