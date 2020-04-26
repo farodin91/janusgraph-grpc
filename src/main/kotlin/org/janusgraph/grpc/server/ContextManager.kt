@@ -6,6 +6,5 @@ import org.janusgraph.grpc.JanusGraphContext
 
 interface ContextManager {
     fun contexts(): List<JanusGraphContext>
-    fun getGraph(context: JanusGraphContext): JanusGraph?
-    fun getManagement(context: JanusGraphContext): JanusGraphManagement?
+    fun getManagement(context: JanusGraphContext?): JanusGraphManagement?
 }

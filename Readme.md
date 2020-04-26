@@ -192,8 +192,10 @@
     * [ ] edgeLabel changes
     * [ ] propertyKey changes
     * [ ] index changes
-* [ ] DefaultJanusGraphManager with Grpc server
-* [ ] ContextManager should support ConfigureGraphFactory
+* [x] DefaultJanusGraphManager as ContextManager
+* [ ] DefaultJanusGraphManager with ConfigureGraphFactory
+* [x] Default values gremlin server settings
+* [x] Grpc server on start JanusGraphServer
 
 ### Unsorted
 

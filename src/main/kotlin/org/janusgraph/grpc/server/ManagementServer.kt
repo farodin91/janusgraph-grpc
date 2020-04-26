@@ -9,7 +9,7 @@ import org.janusgraph.grpc.*
 import java.util.*
 
 
-class ManagementServer(private val contextManager: ContextManager) {
+class ManagementServer {
     private fun convertDataTypeToJavaClass(dataType: PropertyDataType): Class<*> =
         when (dataType) {
             PropertyDataType.String -> java.lang.String::class.java
@@ -91,18 +91,14 @@ class ManagementServer(private val contextManager: ContextManager) {
             .addAllProperties(properties.map { createEdgePropertyProto(it) })
             .build()
 
-    fun getVertexLabelsByName(request: GetVertexLabelsByNameRequest): List<VertexLabel> {
-        val vertexLabel = contextManager
-            .getManagement(request.context)
-            ?.getVertexLabel(request.name) ?: return emptyList()
+    fun getVertexLabelsByName(management: JanusGraphManagement, name: String): List<VertexLabel> {
+        val vertexLabel = management.getVertexLabel(name) ?: return emptyList()
 
         return listOf(createVertexLabelProto(vertexLabel, vertexLabel.mappedProperties().toList()))
     }
 
-    fun getVertexLabels(request: GetVertexLabelsRequest): List<VertexLabel> {
-        return contextManager
-            .getManagement(request.context)
-            ?.vertexLabels?.map { createVertexLabelProto(it, it.mappedProperties().toList()) } ?: return emptyList()
+    fun getVertexLabels(management: JanusGraphManagement): List<VertexLabel> {
+        return management.vertexLabels?.map { createVertexLabelProto(it, it.mappedProperties().toList()) } ?: return emptyList()
     }
 
     private fun getVertexLabel(
@@ -132,9 +128,7 @@ class ManagementServer(private val contextManager: ContextManager) {
         return propertyKey
     }
 
-    fun ensureVertexLabel(request: EnsureVertexLabelRequest): VertexLabel? {
-        val management = contextManager.getManagement(request.context) ?: return null
-        val requestLabel = request.label
+    fun ensureVertexLabel(management: JanusGraphManagement, requestLabel: VertexLabel): VertexLabel? {
         val label = getVertexLabel(management, requestLabel)
         if (label?.name() == requestLabel.name) {
             return createVertexLabelProto(label!!, label.mappedProperties().toList())
@@ -157,18 +151,14 @@ class ManagementServer(private val contextManager: ContextManager) {
         return response
     }
 
-    fun getEdgeLabelsByName(request: GetEdgeLabelsByNameRequest): List<EdgeLabel> {
-        val edgeLabel = contextManager
-            .getManagement(request.context)
-            ?.getEdgeLabel(request.name) ?: return emptyList()
+    fun getEdgeLabelsByName(management: JanusGraphManagement, name: String): List<EdgeLabel> {
+        val edgeLabel = management.getEdgeLabel(name) ?: return emptyList()
 
         return listOf(createEdgeLabelProto(edgeLabel, edgeLabel.mappedProperties().toList()))
     }
 
-    fun getEdgeLabels(request: GetEdgeLabelsRequest): List<EdgeLabel> {
-        return contextManager
-            .getManagement(request.context)
-            ?.getRelationTypes(org.janusgraph.core.EdgeLabel::class.java)
+    fun getEdgeLabels(management: JanusGraphManagement): List<EdgeLabel> {
+        return management.getRelationTypes(org.janusgraph.core.EdgeLabel::class.java)
             ?.map { createEdgeLabelProto(it, it.mappedProperties().toList()) } ?: return emptyList()
     }
 
@@ -185,9 +175,7 @@ class ManagementServer(private val contextManager: ContextManager) {
             management.getEdgeLabel(edgeLabel.name)
         }
 
-    fun ensureEdgeLabel(request: EnsureEdgeLabelRequest): EdgeLabel? {
-        val management = contextManager.getManagement(request.context) ?: return null
-        val requestLabel = request.label
+    fun ensureEdgeLabel(management: JanusGraphManagement, requestLabel: EdgeLabel): EdgeLabel? {
         val label = getEdgeLabel(management, requestLabel)
         if (label?.name() == requestLabel.name) {
             return createEdgeLabelProto(label!!, label.mappedProperties().toList())
