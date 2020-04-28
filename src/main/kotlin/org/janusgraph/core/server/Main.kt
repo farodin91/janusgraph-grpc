@@ -1,6 +1,7 @@
-package org.janusgraph.grpc.server
+package org.janusgraph.core.server
 
 import org.apache.tinkerpop.gremlin.server.Settings
+import org.janusgraph.grpc.server.JanusGraphSettings
 
 fun main(args: Array<String>) {
     // add to vm options: -Dlog4j.configuration=file:conf/log4j.properties

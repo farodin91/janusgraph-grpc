@@ -118,12 +118,12 @@ message CompositeVertexIndex {
     bool unique = 4;
 }
 
-message GetCompositeVertexIndicesByVertexLabelRequest {
+message GetCompositeIndicesByVertexLabelRequest {
     JanusGraphContext context = 1;
     VertexLabel vertexLabel = 2;
 }
 
-message EnsureCompositeVertexIndexByVertexLabelRequest {
+message EnsureCompositeIndexByVertexLabelRequest {
     JanusGraphContext context = 1;
     VertexLabel vertexLabel = 2;
     CompositeVertexIndex index = 3;
@@ -137,12 +137,12 @@ message MixedVertexIndex {
     string backend = 5;
 }
 
-message GetMixedVertexIndicesByVertexLabelRequest {
+message GetMixedIndicesByVertexLabelRequest {
     JanusGraphContext context = 1;
     VertexLabel vertexLabel = 2;
 }
 
-message EnsureMixedVertexIndexByVertexLabelRequest {
+message EnsureMixedIndexByVertexLabelRequest {
     JanusGraphContext context = 1;
     VertexLabel vertexLabel = 2;
     MixedVertexIndex index = 3;
@@ -156,12 +156,12 @@ message CompositeEdgeIndex {
     bool unique = 4;
 }
 
-message GetCompositeEdgeIndicesByEdgeLabelRequest {
+message GetCompositeIndicesByEdgeLabelRequest {
     JanusGraphContext context = 1;
     EdgeLabel edgeLabel = 2;
 }
 
-message EnsureCompositeEdgeIndexByVertexLabelRequest {
+message EnsureCompositeIndexByEdgeLabelRequest {
     JanusGraphContext context = 1;
     EdgeLabel edgeLabel = 2;
     CompositeEdgeIndex index = 3;
@@ -175,39 +175,41 @@ message MixedEdgeIndex {
     string backend = 5;
 }
 
-message GetMixedEdgeIndicesByEdgeLabelRequest {
+message GetMixedIndicesByEdgeLabelRequest {
     JanusGraphContext context = 1;
     EdgeLabel edgeLabel = 2;
 }
 
-message EnsureMixedEdgeIndexByVertexLabelRequest {
+message EnsureMixedIndexByEdgeLabelRequest {
     JanusGraphContext context = 1;
     EdgeLabel edgeLabel = 2;
     MixedEdgeIndex index = 3;
 }
 
 
-service ManagementServer {
-    rpc GetVertexLabels (GetVertexLabelsRequest) returns (stream VertexLabel);
-    rpc GetVertexLabelsByName (GetVertexLabelsByNameRequest) returns (stream VertexLabel);
-    rpc EnsureVertexLabel (EnsureVertexLabelRequest) returns (VertexLabel);
-
-    rpc GetCompositeVertexIndicesByVertexLabel (GetCompositeVertexIndicesByVertexLabelRequest) returns (stream CompositeVertexIndex);
-    rpc EnsureCompositeVertexIndexByVertexLabel (EnsureCompositeVertexIndexByVertexLabelRequest) returns (CompositeVertexIndex);
-
-    rpc GetMixedVertexIndicesByVertexLabel (GetMixedVertexIndicesByVertexLabelRequest) returns (stream MixedVertexIndex);
-    rpc EnsureMixedVertexIndexByVertexLabel (EnsureMixedVertexIndexByVertexLabelRequest) returns (MixedVertexIndex);
-
-    //rpc GetOutgoingEdgesByVertexLabel(GetOutgoingEdgesByVertexLabelRequest) returns (stream EdgeLabel);
-    //rpc GetIncomingEdgesByVertexLabel(GetIncomingEdgesByVertexLabelRequest) returns (stream EdgeLabel);
-
+service ManagementForEdgeLabels {
     rpc GetEdgeLabels (GetEdgeLabelsRequest) returns (stream EdgeLabel);
     rpc GetEdgeLabelsByName (GetEdgeLabelsByNameRequest) returns (stream EdgeLabel);
     rpc EnsureEdgeLabel (EnsureEdgeLabelRequest) returns (EdgeLabel);
 
-    rpc GetCompositeEdgeIndicesByEdgeLabel (GetCompositeEdgeIndicesByEdgeLabelRequest) returns (stream CompositeEdgeIndex);
-    rpc EnsureCompositeEdgeIndexByVertexLabel (EnsureCompositeEdgeIndexByVertexLabelRequest) returns (CompositeEdgeIndex);
+    rpc GetCompositeIndicesByEdgeLabel (GetCompositeIndicesByEdgeLabelRequest) returns (stream CompositeEdgeIndex);
+    rpc EnsureCompositeIndexByEdgeLabel (EnsureCompositeIndexByEdgeLabelRequest) returns (CompositeEdgeIndex);
 
-    rpc GetMixedEdgeIndicesByEdgeLabel (GetMixedEdgeIndicesByEdgeLabelRequest) returns (stream MixedEdgeIndex);
-    rpc EnsureMixedEdgeIndexByVertexLabel (EnsureMixedEdgeIndexByVertexLabelRequest) returns (MixedEdgeIndex);
+    rpc GetMixedIndicesByEdgeLabel (GetMixedIndicesByEdgeLabelRequest) returns (stream MixedEdgeIndex);
+    rpc EnsureMixedIndexByEdgeLabel (EnsureMixedIndexByEdgeLabelRequest) returns (MixedEdgeIndex);
+}
+
+service ManagementForVertexLabels{
+    rpc GetVertexLabels (GetVertexLabelsRequest) returns (stream VertexLabel);
+    rpc GetVertexLabelsByName (GetVertexLabelsByNameRequest) returns (stream VertexLabel);
+    rpc EnsureVertexLabel (EnsureVertexLabelRequest) returns (VertexLabel);
+
+    rpc GetCompositeIndicesByVertexLabel (GetCompositeIndicesByVertexLabelRequest) returns (stream CompositeVertexIndex);
+    rpc EnsureCompositeIndexByVertexLabel (EnsureCompositeIndexByVertexLabelRequest) returns (CompositeVertexIndex);
+
+    rpc GetMixedIndicesByVertexLabel (GetMixedIndicesByVertexLabelRequest) returns (stream MixedVertexIndex);
+    rpc EnsureMixedIndexByVertexLabel (EnsureMixedIndexByVertexLabelRequest) returns (MixedVertexIndex);
+
+    //rpc GetOutgoingEdgesByVertexLabel(GetOutgoingEdgesByVertexLabelRequest) returns (stream EdgeLabel);
+    //rpc GetIncomingEdgesByVertexLabel(GetIncomingEdgesByVertexLabelRequest) returns (stream EdgeLabel);
 }

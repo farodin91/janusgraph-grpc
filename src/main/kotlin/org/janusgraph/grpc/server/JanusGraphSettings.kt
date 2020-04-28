@@ -2,6 +2,7 @@ package org.janusgraph.grpc.server
 
 import org.apache.tinkerpop.gremlin.server.Settings
 import org.apache.tinkerpop.gremlin.server.util.DefaultGraphManager
+import org.janusgraph.core.server.DefaultJanusGraphManager
 import org.yaml.snakeyaml.TypeDescription
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor

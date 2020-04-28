@@ -3,8 +3,11 @@ package org.janusgraph.grpc.server
 import io.grpc.stub.StreamObserver
 import org.janusgraph.grpc.*
 
-class ManagementServerImpl(private val managementServer: ManagementServer, private val contextManager: ContextManager) :
-    ManagementServerGrpc.ManagementServerImplBase() {
+class ManagementForVertexLabelsImpl(
+    private val managementServer: IManagementForVertexLabels,
+    private val contextManager: ContextManager
+) :
+    ManagementForVertexLabelsGrpc.ManagementForVertexLabelsImplBase() {
 
     override fun getVertexLabelsByName(
         request: GetVertexLabelsByNameRequest?,
@@ -16,7 +19,7 @@ class ManagementServerImpl(private val managementServer: ManagementServer, priva
             return
         }
         if (request?.name == null) {
-            responseObserver?.onError(Throwable("Incorrect context"))
+            responseObserver?.onError(Throwable("Not set name"))
             return
         }
         val vertexLabelsByName = managementServer.getVertexLabelsByName(management, request.name)
@@ -31,7 +34,7 @@ class ManagementServerImpl(private val managementServer: ManagementServer, priva
             return
         }
         if (request?.label == null) {
-            responseObserver?.onError(Throwable("Incorrect context"))
+            responseObserver?.onError(Throwable("Not set label"))
             return
         }
         val vertexLabel = managementServer.ensureVertexLabel(management, request.label)
@@ -49,47 +52,26 @@ class ManagementServerImpl(private val managementServer: ManagementServer, priva
         vertexLabelsByName.forEach { responseObserver?.onNext(it) }
         responseObserver?.onCompleted()
     }
-    override fun getEdgeLabelsByName(
-        request: GetEdgeLabelsByNameRequest?,
-        responseObserver: StreamObserver<EdgeLabel>?
+
+    override fun ensureCompositeVertexIndexByVertexLabel(
+        request: EnsureCompositeVertexIndexByVertexLabelRequest?,
+        responseObserver: StreamObserver<CompositeVertexIndex>?
     ) {
         val management = contextManager.getManagement(request?.context)
         if (management == null) {
             responseObserver?.onError(Throwable("Incorrect context"))
             return
         }
-        if (request?.name == null) {
-            responseObserver?.onError(Throwable("Incorrect context"))
+        if (request?.vertexLabel == null) {
+            responseObserver?.onError(Throwable("Not set vertexLabel"))
             return
         }
-        val vertexLabelsByName = managementServer.getEdgeLabelsByName(management, request.name)
-        vertexLabelsByName.forEach { responseObserver?.onNext(it) }
-        responseObserver?.onCompleted()
-    }
-
-    override fun getEdgeLabels(request: GetEdgeLabelsRequest?, responseObserver: StreamObserver<EdgeLabel>?) {
-        val management = contextManager.getManagement(request?.context)
-        if (management == null) {
-            responseObserver?.onError(Throwable("Incorrect context"))
+        if (request.index == null) {
+            responseObserver?.onError(Throwable("Not set index"))
             return
         }
-        val vertexLabelsByName = managementServer.getEdgeLabels(management)
-        vertexLabelsByName.forEach { responseObserver?.onNext(it) }
-        responseObserver?.onCompleted()
-    }
-
-    override fun ensureEdgeLabel(request: EnsureEdgeLabelRequest?, responseObserver: StreamObserver<EdgeLabel>?) {
-        val management = contextManager.getManagement(request?.context)
-        if (management == null) {
-            responseObserver?.onError(Throwable("Incorrect context"))
-            return
-        }
-        if (request?.label == null) {
-            responseObserver?.onError(Throwable("Incorrect context"))
-            return
-        }
-        val edgeLabel = managementServer.ensureEdgeLabel(management, request.label)
-        responseObserver?.onNext(edgeLabel)
+        val index = managementServer.ensureCompositeIndexByVertexLabel(management, request.vertexLabel, request.index)
+        responseObserver?.onNext(index)
         responseObserver?.onCompleted()
     }
 }

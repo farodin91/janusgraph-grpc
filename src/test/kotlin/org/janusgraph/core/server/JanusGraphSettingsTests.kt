@@ -1,5 +1,6 @@
-package org.janusgraph.grpc.server
+package org.janusgraph.core.server
 
+import org.janusgraph.grpc.server.JanusGraphSettings
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
@@ -7,7 +8,8 @@ class JanusGraphSettingsTests {
 
     @Test
     fun `read grpcServer settings`() {
-        val settings = JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
+        val settings =
+            JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
 
         assertEquals(10182, settings.grpcServer.port)
         assertTrue(settings.grpcServer.enabled)
@@ -15,7 +17,8 @@ class JanusGraphSettingsTests {
 
     @Test
     fun `autoImport ensure JanusGraphGremlinPlugin is included`() {
-        val settings = JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
+        val settings =
+            JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
 
         assertNotNull(
             settings.scriptEngines["gremlin-groovy"]
@@ -26,14 +29,16 @@ class JanusGraphSettingsTests {
 
     @Test
     fun `autoImport ensure graphManager is DefaultJanusGraphManager`() {
-        val settings = JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
+        val settings =
+            JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
 
         assertEquals(DefaultJanusGraphManager::class.java.name, settings.graphManager)
     }
 
     @Test
     fun `autoImport ensure GryoMessageSerializerV3d0 is fully configured with JanusGraphIoRegistry`() {
-        val settings = JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
+        val settings =
+            JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
 
         val gryo =
             settings.serializers
@@ -47,7 +52,8 @@ class JanusGraphSettingsTests {
 
     @Test
     fun `autoImport ensure GraphSONMessageSerializerV3d0 is fully configured with JanusGraphIoRegistry`() {
-        val settings = JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
+        val settings =
+            JanusGraphSettings.read("src/test/resources/janusgraph-server.yaml")
 
         val gryo =
             settings.serializers

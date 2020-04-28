@@ -1,9 +1,10 @@
-package org.janusgraph.grpc.server
+package org.janusgraph.core.server
 
 import io.grpc.Server
 import io.grpc.ServerBuilder
 import org.apache.tinkerpop.gremlin.server.GremlinServer
 import org.apache.tinkerpop.gremlin.server.util.ServerGremlinExecutor
+import org.janusgraph.grpc.server.*
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.function.Function
@@ -31,10 +32,20 @@ class JanusGraphServer(settings: JanusGraphSettings) {
         val graphManager: ContextManager? = gremlinServer.serverGremlinExecutor?.graphManager as ContextManager
 
         if(settings.grpcServer.enabled && graphManager != null){
-            val managementServer = ManagementServer()
             grpcServer = ServerBuilder
                 .forPort(settings.grpcServer.port)
-                .addService(ManagementServerImpl(managementServer, graphManager))
+                .addService(
+                    ManagementForEdgeLabelsImpl(
+                        ManagementForEdgeLabels(),
+                        graphManager
+                    )
+                )
+                .addService(
+                    ManagementForVertexLabelsImpl(
+                        ManagementForVertexLabels(),
+                        graphManager
+                    )
+                )
                 .build()
         }
     }

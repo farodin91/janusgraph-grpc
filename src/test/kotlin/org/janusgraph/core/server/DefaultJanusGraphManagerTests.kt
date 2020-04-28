@@ -1,4 +1,4 @@
-package org.janusgraph.grpc.server
+package org.janusgraph.core.server
 
 import org.apache.tinkerpop.gremlin.server.GremlinServer
 import org.apache.tinkerpop.gremlin.server.Settings
@@ -10,7 +10,7 @@ class DefaultJanusGraphManagerTests {
     @Test
     fun `init`(){
         val settings = Settings()
-        settings.graphManager = "org.janusgraph.grpc.server.DefaultJanusGraphManager"
+        settings.graphManager = "org.janusgraph.core.server.DefaultJanusGraphManager"
         settings.graphs = mapOf("graph" to "src/test/resources/janusgraph-inmemory.properties")
 
         val gremlinServer = GremlinServer(settings)

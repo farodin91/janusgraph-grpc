@@ -1,20 +1,20 @@
 package org.janusgraph.grpc.server
 
 import com.google.protobuf.Int64Value
-import org.janusgraph.core.JanusGraph
-import org.janusgraph.grpc.*
-import org.javatuples.Tuple
+import org.janusgraph.grpc.CompositeVertexIndex
+import org.janusgraph.grpc.PropertyDataType
+import org.janusgraph.grpc.VertexLabel
+import org.janusgraph.grpc.VertexProperty
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import org.junit.jupiter.params.provider.ValueSource
 
 
-class ManagementServerTests {
+class ManagementForVertexLabelsTests {
 
     private fun createDefaults() =
-        ManagementServer() to JanusGraphTestUtils.getJanusGraph()
+        ManagementForVertexLabels() to JanusGraphTestUtils.getJanusGraph()
 
     private fun buildVertexLabel(
         name: String = "test",
@@ -32,19 +32,6 @@ class ManagementServerTests {
             vertexLabelBuilder.id = Int64Value.of(vertexId)
         }
         return vertexLabelBuilder.build()
-    }
-
-
-    private fun buildEdgeLabel(
-        name: String = "test",
-        edgeId: Long? = null,
-        properties: List<EdgeProperty> = emptyList()
-    ): EdgeLabel {
-        val edgeLabelBuilder = EdgeLabel.newBuilder().setName(name).addAllProperties(properties)
-        if (edgeId != null) {
-            edgeLabelBuilder.id = Int64Value.of(edgeId)
-        }
-        return edgeLabelBuilder.build()
     }
 
     @Test
@@ -197,7 +184,10 @@ class ManagementServerTests {
     fun `getVertexLabelsByName update name works`() {
         val (managementServer, graph) = createDefaults()
         val ensureEdgeLabel = managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel("test1"))
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel("test2", ensureEdgeLabel?.id?.value))
+        managementServer.ensureVertexLabel(
+            graph.openManagement(),
+            buildVertexLabel("test2", ensureEdgeLabel?.id?.value)
+        )
 
         val vertexLabel = managementServer.getVertexLabelsByName(graph.openManagement(), "test2").firstOrNull()
 
@@ -211,7 +201,8 @@ class ManagementServerTests {
         val (managementServer, graph) = createDefaults()
         val propertyName = "name"
         val property = VertexProperty.newBuilder().setName(propertyName).setDataType(propertyDataType).build()
-        managementServer.ensureVertexLabel(graph.openManagement(),
+        managementServer.ensureVertexLabel(
+            graph.openManagement(),
             buildVertexLabel(name = "test", properties = listOf(property))
         )
 
@@ -228,7 +219,8 @@ class ManagementServerTests {
         val (managementServer, graph) = createDefaults()
         val propertyName = "propertyName"
         val property = VertexProperty.newBuilder().setName(propertyName).setCardinality(propertyCardinality).build()
-        managementServer.ensureVertexLabel(graph.openManagement(),
+        managementServer.ensureVertexLabel(
+            graph.openManagement(),
             buildVertexLabel(name = "vertexName", properties = listOf(property))
         )
 
@@ -269,10 +261,12 @@ class ManagementServerTests {
             .setDataType(PropertyDataType.Boolean)
             .setCardinality(VertexProperty.Cardinality.List)
             .build()
-        managementServer.ensureVertexLabel(graph.openManagement(),
+        managementServer.ensureVertexLabel(
+            graph.openManagement(),
             buildVertexLabel(name = "test1", properties = listOf(property))
         )
-        managementServer.ensureVertexLabel(graph.openManagement(),
+        managementServer.ensureVertexLabel(
+            graph.openManagement(),
             buildVertexLabel(name = "test2", properties = listOf(property))
         )
 
@@ -310,147 +304,19 @@ class ManagementServerTests {
     }
 
     @Test
-    fun `ensureEdgeLabel create basic edgeLabel`() {
-        val (managementServer, graph) = createDefaults()
-        val request = buildEdgeLabel()
+    fun `ensureCompositeIndexByVertexLabel create index`(){
+        val (mangement, graph) = createDefaults()
+        val property = VertexProperty.newBuilder().setName("").setDataType(PropertyDataType.String).build()
+        val label = mangement.ensureVertexLabel(graph.openManagement(), buildVertexLabel(partitioned = true, properties = listOf(property)))
+        val index = CompositeVertexIndex.newBuilder()
+            .setName("test")
+            .addProperties(label?.propertiesList?.first())
+            .build()
 
-        val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request)
+        val compositeIndex = mangement.ensureCompositeIndexByVertexLabel(graph.openManagement(), label!!, index)
 
-        assertEquals("test", edgeLabel?.name)
+        assertEquals("test", compositeIndex?.name)
+        assertEquals(1, compositeIndex?.propertiesCount)
+        assertNotNull(compositeIndex?.id)
     }
-
-    @Test
-    fun `ensureEdgeLabel can run multiple times`() {
-        val (managementServer, graph) = createDefaults()
-        val request = buildEdgeLabel()
-
-        managementServer.ensureEdgeLabel(graph.openManagement(), request)
-        managementServer.ensureEdgeLabel(graph.openManagement(), request)
-        val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request)
-
-        assertEquals("test", edgeLabel?.name)
-    }
-
-    @Test
-    fun `ensureEdgeLabel update name`() {
-        val (managementServer, graph) = createDefaults()
-        val request1 = buildEdgeLabel("test1")
-        val ensureEdgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request1)
-        val request2 = buildEdgeLabel("test2", ensureEdgeLabel?.id?.value)
-
-        val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request2)
-
-        assertEquals("test1", ensureEdgeLabel?.name)
-        assertEquals("test2", edgeLabel?.name)
-        assertEquals(ensureEdgeLabel?.id, edgeLabel?.id)
-    }
-
-    @ParameterizedTest
-    @EnumSource(PropertyDataType::class, mode = EnumSource.Mode.EXCLUDE, names = ["UNRECOGNIZED"])
-    fun `ensureEdgeLabel creates property`(propertyDataType: PropertyDataType) {
-        val (managementServer, graph) = createDefaults()
-        val propertyName = "propertyName"
-        val property = EdgeProperty.newBuilder().setName(propertyName).setDataType(propertyDataType).build()
-        val request = buildEdgeLabel(name = "edgeName", properties = listOf(property))
-
-        val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request)
-
-        assertEquals(1, edgeLabel?.propertiesCount)
-        assertEquals(propertyName, edgeLabel?.propertiesList?.firstOrNull()?.name)
-        assertEquals(propertyDataType, edgeLabel?.propertiesList?.firstOrNull()?.dataType)
-    }
-
-    @Test
-    fun `ensureEdgeLabel can run multiple times with same properties`() {
-        val (managementServer, graph) = createDefaults()
-        val propertyName = "propertyName"
-        val property = EdgeProperty.newBuilder().setName(propertyName).setDataType(PropertyDataType.Boolean).build()
-        val request = buildEdgeLabel(name = "edgeName", properties = listOf(property))
-
-        managementServer.ensureEdgeLabel(graph.openManagement(), request)
-
-        managementServer.ensureEdgeLabel(graph.openManagement(), request)
-        managementServer.ensureEdgeLabel(graph.openManagement(), request)
-        val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request)
-
-        assertEquals(1, edgeLabel?.propertiesCount)
-        assertEquals(propertyName, edgeLabel?.propertiesList?.firstOrNull()?.name)
-        assertEquals(PropertyDataType.Boolean, edgeLabel?.propertiesList?.firstOrNull()?.dataType)
-    }
-
-    @Test
-    fun `getEdgeLabelsByName update name works`() {
-        val (managementServer, graph) = createDefaults()
-        val request1 = buildEdgeLabel("test1")
-        val ensureEdgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request1)
-        val request2 = buildEdgeLabel("test2", ensureEdgeLabel?.id?.value)
-        managementServer.ensureEdgeLabel(graph.openManagement(), request2)
-
-        val edgeLabel = managementServer.getEdgeLabelsByName(graph.openManagement(), "test2").firstOrNull()
-
-        assertEquals("test2", edgeLabel?.name)
-        assertEquals(ensureEdgeLabel?.id, edgeLabel?.id)
-    }
-
-    @Test
-    fun `getEdgeLabelsByName no edgeLabel exists`() {
-        val (managementServer, graph) = createDefaults()
-
-        val edgeLabel = managementServer.getEdgeLabelsByName(graph.openManagement(), "test").firstOrNull()
-
-        assertNull(edgeLabel)
-    }
-
-    @Test
-    fun `getEdgeLabelsByName edgeLabel exists`() {
-        val (managementServer, graph) = createDefaults()
-        val label = "test"
-        managementServer.ensureEdgeLabel(graph.openManagement(), buildEdgeLabel(label))
-
-        val edgeLabel = managementServer.getEdgeLabelsByName(graph.openManagement(), label).firstOrNull()
-
-        assertEquals(label, edgeLabel?.name)
-    }
-
-    @ParameterizedTest
-    @EnumSource(PropertyDataType::class, mode = EnumSource.Mode.EXCLUDE, names = ["UNRECOGNIZED"])
-    fun `getEdgeLabelsByName returns property`(propertyDataType: PropertyDataType) {
-        val (managementServer, graph) = createDefaults()
-        val propertyName = "propertyName"
-        val property = EdgeProperty.newBuilder().setName(propertyName).setDataType(propertyDataType).build()
-        managementServer.ensureEdgeLabel(
-            graph.openManagement(),
-            buildEdgeLabel(name = "edgeName", properties = listOf(property))
-        )
-
-        val edgeLabel = managementServer.getEdgeLabelsByName(graph.openManagement(), "edgeName").firstOrNull()
-
-        assertEquals(1, edgeLabel?.propertiesCount)
-        assertEquals(propertyName, edgeLabel?.propertiesList?.firstOrNull()?.name)
-        assertEquals(propertyDataType, edgeLabel?.propertiesList?.firstOrNull()?.dataType)
-    }
-
-    @Test
-    fun `getEdgeLabels return multiple edgeLabels test size`() {
-        val (managementServer, graph) = createDefaults()
-        managementServer.ensureEdgeLabel(graph.openManagement(), buildEdgeLabel("edgeName1"))
-        managementServer.ensureEdgeLabel(graph.openManagement(), buildEdgeLabel("edgeName2"))
-
-        val edgeLabels = managementServer.getEdgeLabels(graph.openManagement())
-
-        assertEquals(2, edgeLabels.size)
-    }
-
-    @Test
-    fun `getEdgeLabels return multiple edgeLabels contains elements`() {
-        val (managementServer, graph) = createDefaults()
-        managementServer.ensureEdgeLabel(graph.openManagement(), buildEdgeLabel("edgeName1"))
-        managementServer.ensureEdgeLabel(graph.openManagement(), buildEdgeLabel("edgeName2"))
-
-        val edgeLabels = managementServer.getEdgeLabels(graph.openManagement())
-
-        assertNotNull(edgeLabels.firstOrNull { it.name == "edgeName1" })
-        assertNotNull(edgeLabels.firstOrNull { it.name == "edgeName2" })
-    }
-
 }

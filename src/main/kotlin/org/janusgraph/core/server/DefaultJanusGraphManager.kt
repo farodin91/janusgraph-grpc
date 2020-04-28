@@ -1,4 +1,4 @@
-package org.janusgraph.grpc.server
+package org.janusgraph.core.server
 
 import org.apache.tinkerpop.gremlin.driver.MessageSerializer.logger
 import org.apache.tinkerpop.gremlin.groovy.engine.GremlinExecutor
@@ -14,6 +14,7 @@ import org.janusgraph.core.schema.JanusGraphManagement
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import org.janusgraph.graphdb.management.ConfigurationManagementGraph
 import org.janusgraph.grpc.JanusGraphContext
+import org.janusgraph.grpc.server.ContextManager
 import org.slf4j.LoggerFactory
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -25,7 +26,8 @@ import javax.script.Bindings
 import javax.script.SimpleBindings
 
 
-class DefaultJanusGraphManager(settings: Settings) : GraphManager, ContextManager {
+class DefaultJanusGraphManager(settings: Settings) : GraphManager,
+    ContextManager {
     private val graphs: MutableMap<String, Graph?> = ConcurrentHashMap()
     private val traversalSources: MutableMap<String, TraversalSource> = ConcurrentHashMap()
     private var configurationManagementGraph: ConfigurationManagementGraph? = null
