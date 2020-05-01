@@ -1,7 +1,21 @@
 # Potential Replacement of JanusGraph ManagementSystem
 
+## How to use this Project?
 
-## Current State
+1. Download [JanusGraph 0.5.1](https://github.com/JanusGraph/janusgraph/releases/download/v0.5.1/janusgraph-0.5.1.zip) 
+2. Unpack `janusgraph-0.5.1.zip`
+3. Run ./gradlew build
+5. Unpack `build/distributions/janusgraph-grpc-1.0-SNAPSHOT.zip`
+6. Replace/add all files from `janusgraph-grpc-1.0-SNAPSHOT.zip` into the unpacked files from `janusgraph-0.5.1.zip`
+7. Execute ./bin/janusgraph-server.sh
+8. Now you are ready to go (You have a running janusgraph instance with a gRPC server on port 10182 and a gremlin server on port 8128 as normal.)
+9. ToDo: You can use any gRPC client
+
+## Current State of a test Client
+
+Not started yet.
+
+## Current State of the Server
 
 ### Vertices
 

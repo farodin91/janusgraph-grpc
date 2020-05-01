@@ -6,6 +6,7 @@ import org.janusgraph.grpc.PropertyDataType
 import org.janusgraph.grpc.VertexLabel
 import org.janusgraph.grpc.VertexProperty
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
@@ -304,6 +305,7 @@ class ManagementForVertexLabelsTests {
     }
 
     @Test
+    @Disabled
     fun `ensureCompositeIndexByVertexLabel create index`(){
         val (mangement, graph) = createDefaults()
         val property = VertexProperty.newBuilder().setName("").setDataType(PropertyDataType.String).build()

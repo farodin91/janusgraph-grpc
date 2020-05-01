@@ -53,8 +53,8 @@ class ManagementForVertexLabelsImpl(
         responseObserver?.onCompleted()
     }
 
-    override fun ensureCompositeVertexIndexByVertexLabel(
-        request: EnsureCompositeVertexIndexByVertexLabelRequest?,
+    override fun ensureCompositeIndexByVertexLabel(
+        request: EnsureCompositeIndexByVertexLabelRequest?,
         responseObserver: StreamObserver<CompositeVertexIndex>?
     ) {
         val management = contextManager.getManagement(request?.context)
