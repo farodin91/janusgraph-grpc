@@ -28,7 +28,7 @@ import javax.script.SimpleBindings
 
 class DefaultJanusGraphManager(settings: Settings) : GraphManager,
     ContextManager {
-    private val graphs: MutableMap<String, Graph?> = ConcurrentHashMap()
+    private val graphs: MutableMap<String, JanusGraph?> = ConcurrentHashMap()
     private val traversalSources: MutableMap<String, TraversalSource> = ConcurrentHashMap()
     private var configurationManagementGraph: ConfigurationManagementGraph? = null
     private val instantiateGraphLock = Any()
@@ -84,7 +84,7 @@ class DefaultJanusGraphManager(settings: Settings) : GraphManager,
     }
 
     override fun putGraph(gName: String, g: Graph) {
-        graphs[gName] = g
+        graphs[gName] = g as JanusGraph
     }
 
     override fun getTraversalSourceNames(): Set<String> {
@@ -171,7 +171,7 @@ class DefaultJanusGraphManager(settings: Settings) : GraphManager,
             synchronized(instantiateGraphLock) {
                 graph = graphs[gName]
                 if (graph == null || (graph as StandardJanusGraph).isClosed) {
-                    graph = thunk.apply(gName)
+                    graph = thunk.apply(gName) as JanusGraph
                     graphs[gName] = graph
                 }
             }
@@ -207,7 +207,12 @@ class DefaultJanusGraphManager(settings: Settings) : GraphManager,
     }
 
     override fun contexts(): List<JanusGraphContext> =
-        graphNames.map { JanusGraphContext.newBuilder().setGraphName(it).build() }
+        graphs.map { JanusGraphContext.newBuilder().setGraphName(it.key).build() }
+
+    override fun contextByName(graphName: String): JanusGraphContext? {
+        graphs[graphName] ?: return null
+        return JanusGraphContext.newBuilder().setGraphName(graphName).build()
+    }
 
     override fun getManagement(context: JanusGraphContext?): JanusGraphManagement?{
         if(context == null)

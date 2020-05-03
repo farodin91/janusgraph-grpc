@@ -4,3 +4,4 @@ build
 gradle
 *.bat
 gradlew
+client/target

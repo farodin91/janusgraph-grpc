@@ -6,7 +6,19 @@ import "google/protobuf/wrappers.proto";
 
 option java_multiple_files = true;
 option java_package = "org.janusgraph.grpc";
-option java_outer_classname = "SchemaProto";
+option java_outer_classname = "ManagementProto";
+
+message JanusGraphContext {
+    string graphName = 1;
+    string storageBackend = 2;
+}
+
+message GetContextByGraphNameRequest {
+    string name = 2;
+}
+message GetContextsRequest {
+
+}
 
 enum PropertyDataType {
     String = 0;
@@ -42,10 +54,6 @@ message VertexLabel {
     repeated VertexProperty properties = 3;
     bool readOnly = 4;
     bool partitioned = 5;
-}
-
-message JanusGraphContext {
-    string graphName = 1;
 }
 
 message GetVertexLabelsByNameRequest {
@@ -186,6 +194,10 @@ message EnsureMixedIndexByEdgeLabelRequest {
     MixedEdgeIndex index = 3;
 }
 
+service AccessContext {
+    rpc GetContexts (GetContextsRequest) returns (stream JanusGraphContext);
+    rpc GetContextByGraphName (GetContextByGraphNameRequest) returns (JanusGraphContext);
+}
 
 service ManagementForEdgeLabels {
     rpc GetEdgeLabels (GetEdgeLabelsRequest) returns (stream EdgeLabel);

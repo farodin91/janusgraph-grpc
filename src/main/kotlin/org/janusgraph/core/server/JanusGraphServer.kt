@@ -34,6 +34,7 @@ class JanusGraphServer(settings: JanusGraphSettings) {
         if(settings.grpcServer.enabled && graphManager != null){
             grpcServer = ServerBuilder
                 .forPort(settings.grpcServer.port)
+                .addService(AccessContextImpl(graphManager))
                 .addService(
                     ManagementForEdgeLabelsImpl(
                         ManagementForEdgeLabels(),
