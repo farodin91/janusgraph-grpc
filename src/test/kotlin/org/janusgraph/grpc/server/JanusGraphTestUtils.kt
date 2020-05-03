@@ -4,6 +4,7 @@ import org.janusgraph.core.JanusGraph
 import org.janusgraph.core.JanusGraphFactory
 import org.janusgraph.diskstorage.configuration.ModifiableConfiguration
 import org.janusgraph.graphdb.configuration.GraphDatabaseConfiguration
+import org.janusgraph.graphdb.database.StandardJanusGraph
 
 class JanusGraphTestUtils {
     companion object {
@@ -15,6 +16,6 @@ class JanusGraphTestUtils {
             return config
         }
 
-        fun getJanusGraph(): JanusGraph = JanusGraphFactory.open(getConfiguration())
+        fun getJanusGraph(): StandardJanusGraph = JanusGraphFactory.open(getConfiguration()) as StandardJanusGraph
     }
 }

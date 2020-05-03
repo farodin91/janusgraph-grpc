@@ -1,9 +1,17 @@
 package org.janusgraph.grpc.server
 
 import com.google.protobuf.Int64Value
+import org.apache.tinkerpop.gremlin.structure.Element
 import org.janusgraph.core.Cardinality
+import org.janusgraph.core.JanusGraphVertex
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.attribute.Geoshape
+import org.janusgraph.graphdb.internal.JanusGraphSchemaCategory
+import org.janusgraph.graphdb.query.QueryUtil
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx
+import org.janusgraph.graphdb.types.IndexType
+import org.janusgraph.graphdb.types.system.BaseKey
+import org.janusgraph.graphdb.types.vertices.JanusGraphSchemaVertex
 import org.janusgraph.grpc.*
 import java.util.*
 
@@ -62,6 +70,7 @@ internal fun convertJavaClassToCardinality(cardinality: Cardinality): VertexProp
 
 internal fun createVertexPropertyProto(property: PropertyKey): VertexProperty =
     VertexProperty.newBuilder()
+        .setId(Int64Value.of(property.longId()))
         .setName(property.name())
         .setDataType(convertJavaClassToDataType(property.dataType()))
         .setCardinality(convertJavaClassToCardinality(property.cardinality()))
@@ -88,3 +97,23 @@ internal fun createEdgeLabelProto(edgeLabel: org.janusgraph.core.EdgeLabel, prop
         .setName(edgeLabel.name())
         .addAllProperties(properties.map { createEdgePropertyProto(it) })
         .build()
+
+internal fun getGraphIndices(tx: StandardJanusGraphTx, clazz: Class<out Element>): List<IndexType> =
+    QueryUtil.getVertices(tx, BaseKey.SchemaCategory, JanusGraphSchemaCategory.GRAPHINDEX)
+        .map { janusGraphVertex: JanusGraphVertex ->
+            assert(janusGraphVertex is JanusGraphSchemaVertex)
+            (janusGraphVertex as JanusGraphSchemaVertex).asIndexType()
+        }
+        .filter { indexType: IndexType ->
+            indexType.element.subsumedBy(clazz)
+        }
+
+internal fun getVertexLabels(tx: StandardJanusGraphTx): List<org.janusgraph.core.VertexLabel> = QueryUtil
+    .getVertices(tx, BaseKey.SchemaCategory, JanusGraphSchemaCategory.VERTEXLABEL)
+    .mapNotNull { it as? org.janusgraph.core.VertexLabel }
+    .toList()
+
+internal fun getEdgeLabels(tx: StandardJanusGraphTx): List<org.janusgraph.core.EdgeLabel> = QueryUtil
+    .getVertices(tx, BaseKey.SchemaCategory, JanusGraphSchemaCategory.EDGELABEL)
+    .mapNotNull { it as? org.janusgraph.core.EdgeLabel }
+    .toList()

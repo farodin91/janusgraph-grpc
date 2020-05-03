@@ -26,8 +26,7 @@ import javax.script.Bindings
 import javax.script.SimpleBindings
 
 
-class DefaultJanusGraphManager(settings: Settings) : GraphManager,
-    ContextManager {
+class DefaultJanusGraphManager(settings: Settings) : GraphManager, ContextManager {
     private val graphs: MutableMap<String, JanusGraph?> = ConcurrentHashMap()
     private val traversalSources: MutableMap<String, TraversalSource> = ConcurrentHashMap()
     private var configurationManagementGraph: ConfigurationManagementGraph? = null
@@ -62,7 +61,9 @@ class DefaultJanusGraphManager(settings: Settings) : GraphManager,
                         // cannot open graph, do nothing
                         log.error(
                             String.format(
-                                """Failed to open graph %s with the following error: %s. Thus, it and its traversal will not be bound on this server.""", it, e.toString()
+                                """Failed to open graph %s with the following error: %s. Thus, it and its traversal will not be bound on this server.""",
+                                it,
+                                e.toString()
                             )
                         )
                     }
@@ -145,7 +146,7 @@ class DefaultJanusGraphManager(settings: Settings) : GraphManager,
         // that as of right now unless they were embedded in which case they'd need to know what they were doing
         // anyway
         graphSourceNamesToCloseTxOn.forEach(Consumer { r: String? ->
-            if (graphs.containsKey(                    r                )
+            if (graphs.containsKey(r)
             ) graphsToCloseTxOn.add(graphs[r]) else graphsToCloseTxOn.add(traversalSources[r]!!.graph)
         })
         graphsToCloseTxOn
@@ -214,14 +215,17 @@ class DefaultJanusGraphManager(settings: Settings) : GraphManager,
         return JanusGraphContext.newBuilder().setGraphName(graphName).build()
     }
 
-    override fun getManagement(context: JanusGraphContext?): JanusGraphManagement?{
-        if(context == null)
+    override fun getGraph(context: JanusGraphContext?): StandardJanusGraph? {
+        if (context == null)
             return null
         val graph = getGraph(context.graphName)
-        if(graph is JanusGraph)
-            return graph.openManagement()
+        if (graph is StandardJanusGraph)
+            return graph
         return null
     }
+
+    override fun getManagement(context: JanusGraphContext?): JanusGraphManagement? =
+        getGraph(context)?.openManagement()
 
     companion object {
         private val log = LoggerFactory.getLogger(DefaultJanusGraphManager::class.java)

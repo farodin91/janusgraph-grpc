@@ -1,15 +1,16 @@
 package org.janusgraph.grpc.server
 
 import com.google.protobuf.Int64Value
+import org.janusgraph.core.JanusGraph
 import org.janusgraph.grpc.CompositeVertexIndex
 import org.janusgraph.grpc.PropertyDataType
 import org.janusgraph.grpc.VertexLabel
 import org.janusgraph.grpc.VertexProperty
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.ValueSource
 
 
 class ManagementForVertexLabelsTests {
@@ -17,28 +18,50 @@ class ManagementForVertexLabelsTests {
     private fun createDefaults() =
         ManagementForVertexLabels() to JanusGraphTestUtils.getJanusGraph()
 
-    private fun buildVertexLabel(
+    private fun buildLabel(
         name: String = "test",
         vertexId: Long? = null,
         properties: List<VertexProperty> = emptyList(),
         readOnly: Boolean = false,
-        partitioned: Boolean = false
+        partitioned: Boolean = false,
+        managementServer: IManagementForVertexLabels? = null,
+        graph: JanusGraph? = null
     ): VertexLabel {
-        val vertexLabelBuilder = VertexLabel.newBuilder()
+        val builder = VertexLabel.newBuilder()
             .setName(name)
             .addAllProperties(properties)
             .setReadOnly(readOnly)
             .setPartitioned(partitioned)
         if (vertexId != null) {
-            vertexLabelBuilder.id = Int64Value.of(vertexId)
+            builder.id = Int64Value.of(vertexId)
         }
-        return vertexLabelBuilder.build()
+        return if (managementServer != null && graph != null) {
+            managementServer.ensureVertexLabel(graph.openManagement(), builder.build())!!
+        } else {
+            builder.build()
+        }
+    }
+
+    private fun buildProperty(
+        name: String = "propertyName",
+        id: Long? = null,
+        dataType: PropertyDataType = PropertyDataType.Int32,
+        cardinality: VertexProperty.Cardinality = VertexProperty.Cardinality.Single
+    ): VertexProperty {
+        val builder = VertexProperty.newBuilder()
+            .setName(name)
+            .setDataType(dataType)
+            .setCardinality(cardinality)
+        if (id != null) {
+            builder.id = Int64Value.of(id)
+        }
+        return builder.build()
     }
 
     @Test
     fun `ensureVertexLabel create basic vertexLabel`() {
         val (managementServer, graph) = createDefaults()
-        val request = buildVertexLabel()
+        val request = buildLabel()
 
         val vertexLabel = managementServer.ensureVertexLabel(graph.openManagement(), request)
 
@@ -48,7 +71,7 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `ensureVertexLabel vertexLabel marked as readOnly`() {
         val (managementServer, graph) = createDefaults()
-        val request = buildVertexLabel(readOnly = true)
+        val request = buildLabel(readOnly = true)
 
         val vertexLabel = managementServer.ensureVertexLabel(graph.openManagement(), request)
 
@@ -58,7 +81,7 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `ensureVertexLabel vertexLabel marked as partitioned`() {
         val (managementServer, graph) = createDefaults()
-        val request = buildVertexLabel(partitioned = true)
+        val request = buildLabel(partitioned = true)
 
         val vertexLabel = managementServer.ensureVertexLabel(graph.openManagement(), request)
 
@@ -68,7 +91,7 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `ensureVertexLabel can run multiple times`() {
         val (managementServer, graph) = createDefaults()
-        val request = buildVertexLabel()
+        val request = buildLabel()
 
         managementServer.ensureVertexLabel(graph.openManagement(), request)
         managementServer.ensureVertexLabel(graph.openManagement(), request)
@@ -80,15 +103,14 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `ensureVertexLabel update name`() {
         val (managementServer, graph) = createDefaults()
-        val request1 = buildVertexLabel("test1")
-        val ensureVertexLabel = managementServer.ensureVertexLabel(graph.openManagement(), request1)
-        val request2 = buildVertexLabel("test2", ensureVertexLabel?.id?.value)
+        val ensureLabel = buildLabel("test1", managementServer= managementServer, graph = graph)
+        val request2 = buildLabel("test2", ensureLabel.id?.value)
 
-        val vertexLabel = managementServer.ensureVertexLabel(graph.openManagement(), request2)
+        val label = managementServer.ensureVertexLabel(graph.openManagement(), request2)
 
-        assertEquals("test1", ensureVertexLabel?.name)
-        assertEquals("test2", vertexLabel?.name)
-        assertEquals(ensureVertexLabel?.id, vertexLabel?.id)
+        assertEquals("test1", ensureLabel.name)
+        assertEquals("test2", label?.name)
+        assertEquals(ensureLabel.id, label?.id)
     }
 
     @ParameterizedTest
@@ -96,8 +118,8 @@ class ManagementForVertexLabelsTests {
     fun `ensureVertexLabel creates property`(propertyDataType: PropertyDataType) {
         val (managementServer, graph) = createDefaults()
         val propertyName = "name"
-        val property = VertexProperty.newBuilder().setName(propertyName).setDataType(propertyDataType).build()
-        val request = buildVertexLabel(name = "test", properties = listOf(property))
+        val property = buildProperty(propertyName, dataType = propertyDataType)
+        val request = buildLabel(name = "test", properties = listOf(property))
 
         val vertexLabel = managementServer.ensureVertexLabel(graph.openManagement(), request)
 
@@ -107,16 +129,24 @@ class ManagementForVertexLabelsTests {
     }
 
     @ParameterizedTest
+    @ValueSource(ints = [1, 2, 3, 8, 16])
+    fun `ensureVertexLabel creates property`(numberOfProperties: Int) {
+        val (managementServer, graph) = createDefaults()
+        val properties = (1..numberOfProperties).map { buildProperty("propertyName$it") }
+        val request = buildLabel(name = "test", properties = properties)
+
+        val label = managementServer.ensureVertexLabel(graph.openManagement(), request)
+
+        assertEquals(numberOfProperties, label?.propertiesCount)
+    }
+
+    @ParameterizedTest
     @EnumSource(VertexProperty.Cardinality::class, mode = EnumSource.Mode.EXCLUDE, names = ["UNRECOGNIZED"])
     fun `ensureVertexLabel creates property`(propertyCardinality: VertexProperty.Cardinality) {
         val (managementServer, graph) = createDefaults()
         val propertyName = "propertyName"
-        val property = VertexProperty.newBuilder()
-            .setName(propertyName)
-            .setDataType(PropertyDataType.String)
-            .setCardinality(propertyCardinality)
-            .build()
-        val request = buildVertexLabel(name = "vertexName", properties = listOf(property))
+        val property = buildProperty(propertyName, cardinality = propertyCardinality)
+        val request = buildLabel(name = "vertexName", properties = listOf(property))
 
         val vertexLabel = managementServer.ensureVertexLabel(graph.openManagement(), request)
 
@@ -127,8 +157,8 @@ class ManagementForVertexLabelsTests {
     fun `ensureVertexLabel can run multiple times with same properties`() {
         val (managementServer, graph) = createDefaults()
         val propertyName = "name"
-        val property = VertexProperty.newBuilder().setName(propertyName).setDataType(PropertyDataType.Boolean).build()
-        val request = buildVertexLabel(name = "test", properties = listOf(property))
+        val property = buildProperty(propertyName)
+        val request = buildLabel(name = "test", properties = listOf(property))
 
         managementServer.ensureVertexLabel(graph.openManagement(), request)
 
@@ -138,7 +168,39 @@ class ManagementForVertexLabelsTests {
 
         assertEquals(1, vertexLabel?.propertiesCount)
         assertEquals(propertyName, vertexLabel?.propertiesList?.firstOrNull()?.name)
-        assertEquals(PropertyDataType.Boolean, vertexLabel?.propertiesList?.firstOrNull()?.dataType)
+        assertEquals(PropertyDataType.Int32, vertexLabel?.propertiesList?.firstOrNull()?.dataType)
+    }
+
+    @Test
+    fun `ensureVertexLabel with property update label name`() {
+        val (managementServer, graph) = createDefaults()
+        val request1 = buildLabel("test1")
+        val propertyName = "propertyName"
+        val ensureVertexLabel = managementServer.ensureVertexLabel(graph.openManagement(), request1)
+        val property = buildProperty(propertyName)
+        val request2 = buildLabel("test2", ensureVertexLabel?.id?.value, properties = listOf(property))
+
+        val label = managementServer.ensureVertexLabel(graph.openManagement(), request2)
+
+        assertEquals(1, label?.propertiesCount)
+        assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
+    }
+
+    @ParameterizedTest
+    @EnumSource(PropertyDataType::class, mode = EnumSource.Mode.EXCLUDE, names = ["UNRECOGNIZED"])
+    fun `ensureVertexLabel add property as update`(propertyDataType: PropertyDataType) {
+        val (managementServer, graph) = createDefaults()
+        val propertyName = "propertyName"
+        val request1 = buildLabel(name = "test")
+        managementServer.ensureVertexLabel(graph.openManagement(), request1)
+        val property = buildProperty(propertyName, dataType = propertyDataType)
+        val request = buildLabel(name = "test", properties = listOf(property))
+
+        val label = managementServer.ensureVertexLabel(graph.openManagement(), request)
+
+        assertEquals(1, label?.propertiesCount)
+        assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
+        assertEquals(propertyDataType, label?.propertiesList?.firstOrNull()?.dataType)
     }
 
     @Test
@@ -154,7 +216,7 @@ class ManagementForVertexLabelsTests {
     fun `getVertexLabelsByName vertexLabel exists`() {
         val (managementServer, graph) = createDefaults()
         val label = "test"
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel(label))
+        managementServer.ensureVertexLabel(graph.openManagement(), buildLabel(label))
 
         val vertexLabel = managementServer.getVertexLabelsByName(graph.openManagement(), label).firstOrNull()
 
@@ -164,7 +226,7 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `getVertexLabelsByName vertexLabel marked as readOnly`() {
         val (managementServer, graph) = createDefaults()
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel(readOnly = true))
+        managementServer.ensureVertexLabel(graph.openManagement(), buildLabel(readOnly = true))
 
         val vertexLabel = managementServer.getVertexLabelsByName(graph.openManagement(), "test").firstOrNull()
 
@@ -174,7 +236,7 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `getVertexLabelsByName vertexLabel marked as partitioned`() {
         val (managementServer, graph) = createDefaults()
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel(partitioned = true))
+        managementServer.ensureVertexLabel(graph.openManagement(), buildLabel(partitioned = true))
 
         val vertexLabel = managementServer.getVertexLabelsByName(graph.openManagement(), "test").firstOrNull()
 
@@ -184,10 +246,10 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `getVertexLabelsByName update name works`() {
         val (managementServer, graph) = createDefaults()
-        val ensureEdgeLabel = managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel("test1"))
+        val ensureEdgeLabel = managementServer.ensureVertexLabel(graph.openManagement(), buildLabel("test1"))
         managementServer.ensureVertexLabel(
             graph.openManagement(),
-            buildVertexLabel("test2", ensureEdgeLabel?.id?.value)
+            buildLabel("test2", ensureEdgeLabel?.id?.value)
         )
 
         val vertexLabel = managementServer.getVertexLabelsByName(graph.openManagement(), "test2").firstOrNull()
@@ -201,10 +263,10 @@ class ManagementForVertexLabelsTests {
     fun `getVertexLabelsByName returns property`(propertyDataType: PropertyDataType) {
         val (managementServer, graph) = createDefaults()
         val propertyName = "name"
-        val property = VertexProperty.newBuilder().setName(propertyName).setDataType(propertyDataType).build()
+        val property = buildProperty(propertyName, dataType = propertyDataType)
         managementServer.ensureVertexLabel(
             graph.openManagement(),
-            buildVertexLabel(name = "test", properties = listOf(property))
+            buildLabel(name = "test", properties = listOf(property))
         )
 
         val vertexLabel = managementServer.getVertexLabelsByName(graph.openManagement(), "test").firstOrNull()
@@ -219,10 +281,10 @@ class ManagementForVertexLabelsTests {
     fun `getVertexLabelsByName returns property`(propertyCardinality: VertexProperty.Cardinality) {
         val (managementServer, graph) = createDefaults()
         val propertyName = "propertyName"
-        val property = VertexProperty.newBuilder().setName(propertyName).setCardinality(propertyCardinality).build()
+        val property = buildProperty(propertyName, cardinality = propertyCardinality)
         managementServer.ensureVertexLabel(
             graph.openManagement(),
-            buildVertexLabel(name = "vertexName", properties = listOf(property))
+            buildLabel(name = "vertexName", properties = listOf(property))
         )
 
         val vertexLabel = managementServer.getVertexLabelsByName(graph.openManagement(), "vertexName").firstOrNull()
@@ -231,10 +293,41 @@ class ManagementForVertexLabelsTests {
     }
 
     @Test
+    fun `getVertexLabelsByName can run multiple times with same properties`() {
+        val (managementServer, graph) = createDefaults()
+        val propertyName = "name"
+        val property = buildProperty(propertyName)
+        val request = buildLabel(name = "vertexName", properties = listOf(property))
+
+        managementServer.ensureVertexLabel(graph.openManagement(), request)
+        managementServer.ensureVertexLabel(graph.openManagement(), request)
+        managementServer.ensureVertexLabel(graph.openManagement(), request)
+
+        val label = managementServer.getVertexLabelsByName(graph.openManagement(), "vertexName").firstOrNull()
+
+        assertEquals(1, label?.propertiesCount)
+        assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
+        assertEquals(PropertyDataType.Int32, label?.propertiesList?.firstOrNull()?.dataType)
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = [1, 2, 3, 8, 16])
+    fun `getVertexLabelsByName creates property`(numberOfProperties: Int) {
+        val (managementServer, graph) = createDefaults()
+        val properties = (1..numberOfProperties).map { buildProperty("propertyName$it") }
+        val request = buildLabel(name = "vertexName", properties = properties)
+        managementServer.ensureVertexLabel(graph.openManagement(), request)
+
+        val label = managementServer.getVertexLabelsByName(graph.openManagement(), "vertexName").firstOrNull()
+
+        assertEquals(numberOfProperties, label?.propertiesCount)
+    }
+
+    @Test
     fun `getVertexLabels return multiple vertexLabels`() {
         val (managementServer, graph) = createDefaults()
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel("test1"))
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel("test2"))
+        managementServer.ensureVertexLabel(graph.openManagement(), buildLabel("test1"))
+        managementServer.ensureVertexLabel(graph.openManagement(), buildLabel("test2"))
 
         val vertexLabels = managementServer.getVertexLabels(graph.openManagement())
 
@@ -244,8 +337,8 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `getVertexLabels return multiple vertexLabels contains elements`() {
         val (managementServer, graph) = createDefaults()
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel("test1"))
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel("test2"))
+        buildLabel("test1", managementServer= managementServer, graph = graph)
+        buildLabel("test2", managementServer= managementServer, graph = graph)
 
         val vertexLabels = managementServer.getVertexLabels(graph.openManagement())
 
@@ -257,19 +350,13 @@ class ManagementForVertexLabelsTests {
     fun `getVertexLabels returns multiple vertexLabels with property`() {
         val (managementServer, graph) = createDefaults()
         val propertyName = "name"
-        val property = VertexProperty.newBuilder()
-            .setName(propertyName)
-            .setDataType(PropertyDataType.Boolean)
-            .setCardinality(VertexProperty.Cardinality.List)
-            .build()
-        managementServer.ensureVertexLabel(
-            graph.openManagement(),
-            buildVertexLabel(name = "test1", properties = listOf(property))
+        val property = buildProperty(
+            propertyName,
+            dataType = PropertyDataType.Boolean,
+            cardinality = VertexProperty.Cardinality.List
         )
-        managementServer.ensureVertexLabel(
-            graph.openManagement(),
-            buildVertexLabel(name = "test2", properties = listOf(property))
-        )
+        buildLabel("test1", properties = listOf(property), managementServer= managementServer, graph = graph)
+        buildLabel("test2", properties = listOf(property), managementServer= managementServer, graph = graph)
 
         val vertexLabels = managementServer.getVertexLabels(graph.openManagement())
         val vertexLabel1 = vertexLabels.firstOrNull { it.name == "test1" }
@@ -287,7 +374,7 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `getVertexLabels vertexLabel marked as readOnly`() {
         val (managementServer, graph) = createDefaults()
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel(readOnly = true))
+        buildLabel(readOnly = true, managementServer= managementServer, graph = graph)
 
         val vertexLabel = managementServer.getVertexLabels(graph.openManagement()).firstOrNull()
 
@@ -297,28 +384,94 @@ class ManagementForVertexLabelsTests {
     @Test
     fun `getVertexLabels vertexLabel marked as partitioned`() {
         val (managementServer, graph) = createDefaults()
-        managementServer.ensureVertexLabel(graph.openManagement(), buildVertexLabel(partitioned = true))
+        buildLabel(partitioned = true, managementServer = managementServer, graph = graph)
 
         val vertexLabel = managementServer.getVertexLabels(graph.openManagement()).firstOrNull()
 
         assertTrue(vertexLabel?.partitioned!!)
     }
 
-    @Test
-    @Disabled
-    fun `ensureCompositeIndexByVertexLabel create index`(){
-        val (mangement, graph) = createDefaults()
-        val property = VertexProperty.newBuilder().setName("").setDataType(PropertyDataType.String).build()
-        val label = mangement.ensureVertexLabel(graph.openManagement(), buildVertexLabel(partitioned = true, properties = listOf(property)))
-        val index = CompositeVertexIndex.newBuilder()
-            .setName("test")
-            .addProperties(label?.propertiesList?.first())
-            .build()
+    @ParameterizedTest
+    @ValueSource(ints = [1, 2, 3, 8, 16])
+    fun `getVertexLabels creates property`(numberOfProperties: Int) {
+        val (managementServer, graph) = createDefaults()
+        val properties = (1..numberOfProperties).map { buildProperty("propertyName$it") }
+        val request = buildLabel(name = "test", properties = properties)
+        managementServer.ensureVertexLabel(graph.openManagement(), request)
 
-        val compositeIndex = mangement.ensureCompositeIndexByVertexLabel(graph.openManagement(), label!!, index)
+        val vertexLabel = managementServer.getVertexLabels(graph.openManagement()).firstOrNull()
+
+        assertEquals(numberOfProperties, vertexLabel?.propertiesCount)
+    }
+
+    private fun buildCompositeIndex(
+        name: String = "byCompositeIndex",
+        id: Long? = null,
+        properties: List<VertexProperty> = emptyList()
+    ): CompositeVertexIndex {
+        val builder = CompositeVertexIndex.newBuilder()
+            .setName(name)
+            .addAllProperties(properties)
+        if (id != null) {
+            builder.id = Int64Value.of(id)
+        }
+        return builder.build()
+    }
+
+    @Test
+    fun `ensureCompositeIndexByVertexLabel create basic index`() {
+        val (managementServer, graph) = createDefaults()
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+        val index = buildCompositeIndex("test", properties = listOf(label.propertiesList!!.first()))
+
+        val compositeIndex = managementServer.ensureCompositeIndexByVertexLabel(graph.openManagement(), label, index)
 
         assertEquals("test", compositeIndex?.name)
         assertEquals(1, compositeIndex?.propertiesCount)
         assertNotNull(compositeIndex?.id)
+    }
+
+    @Test
+    fun `ensureCompositeIndexByVertexLabel create index with two properties`() {
+        val (managementServer, graph) = createDefaults()
+        val property1 = buildProperty("property1", dataType = PropertyDataType.String)
+        val property2 = buildProperty("property2", dataType = PropertyDataType.String)
+        val property3 = buildProperty("property3", dataType = PropertyDataType.String)
+        val label =
+            buildLabel(properties = listOf(property1, property2, property3), managementServer = managementServer, graph = graph)
+        val index = buildCompositeIndex("test", properties = listOf(property1, property2))
+
+        val compositeIndex = managementServer.ensureCompositeIndexByVertexLabel(graph.openManagement(), label, index)!!
+
+        assertEquals(2, compositeIndex.propertiesCount)
+        assertTrue(compositeIndex.propertiesList.any { it.name == property1.name })
+        assertTrue(compositeIndex.propertiesList.any { it.name == property2.name })
+    }
+
+    @Test
+    fun `getCompositeIndicesByVertexLabel get no index`() {
+        val (managementServer, graph) = createDefaults()
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+
+        val compositeIndex = managementServer.getCompositeIndicesByVertexLabel(graph, label).firstOrNull()
+
+        assertNull(compositeIndex)
+    }
+
+    @Test
+    fun `getCompositeIndicesByVertexLabel basic index`() {
+        val (managementServer, graph) = createDefaults()
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+        val index = buildCompositeIndex("test", properties = listOf(label.propertiesList!!.first()))
+        managementServer.ensureCompositeIndexByVertexLabel(graph.openManagement(), label, index)
+
+        val compositeIndex = managementServer.getCompositeIndicesByVertexLabel(graph, label).first()
+
+        assertEquals("test", compositeIndex.name)
+        assertEquals(1, compositeIndex.propertiesCount)
+        assertNotNull(compositeIndex.id)
     }
 }

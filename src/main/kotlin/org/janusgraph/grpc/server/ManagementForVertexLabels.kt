@@ -1,10 +1,15 @@
 package org.janusgraph.grpc.server
 
+import org.apache.tinkerpop.gremlin.structure.Edge
+import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.schema.JanusGraphManagement
+import org.janusgraph.graphdb.database.StandardJanusGraph
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx
 import org.janusgraph.grpc.CompositeVertexIndex
 import org.janusgraph.grpc.VertexLabel
 import org.janusgraph.grpc.VertexProperty
+import java.lang.NullPointerException
 
 class ManagementForVertexLabels : IManagementForVertexLabels {
 
@@ -30,18 +35,18 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
 
     private fun getVertexLabel(
         management: JanusGraphManagement,
-        vertexLabel: VertexLabel
+        label: VertexLabel
     ): org.janusgraph.core.VertexLabel? =
-        if (vertexLabel.hasId()) {
-            management.vertexLabels.first { it.longId() == vertexLabel.id.value }
+        if (label.hasId()) {
+            management.vertexLabels.first { it.longId() == label.id.value }
                 ?: throw IllegalArgumentException("No vertexLabel found with id")
         } else {
-            management.getVertexLabel(vertexLabel.name)
+            management.getVertexLabel(label.name)
         }
 
     private fun getOrCreateVertexProperty(
         management: JanusGraphManagement,
-        vertexLabel: org.janusgraph.core.VertexLabel,
+        label: org.janusgraph.core.VertexLabel,
         property: VertexProperty
     ): PropertyKey {
         val propertyKey =
@@ -50,32 +55,33 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
                 .dataType(convertDataTypeToJavaClass(property.dataType))
                 .cardinality(convertCardinalityToJavaClass(property.cardinality))
                 .make()
-
-        management.addProperties(vertexLabel, propertyKey)
+        val connections = label.mappedProperties()
+        if (!connections.contains(propertyKey)) {
+            management.addProperties(label, propertyKey)
+        }
         return propertyKey
     }
 
     override fun ensureVertexLabel(management: JanusGraphManagement, requestLabel: VertexLabel): VertexLabel? {
         val label = getVertexLabel(management, requestLabel)
-        if (label?.name() == requestLabel.name) {
-            return createVertexLabelProto(
-                label!!,
-                label.mappedProperties().toList()
-            )
+        val name = requestLabel.name ?: throw NullPointerException("name should not be null")
+        val vertexLabel = when {
+            label?.name() == name -> label
+            label != null -> {
+                management.changeName(label, name)
+                label
+            }
+            else -> {
+                val vertexLabelMaker = management.makeVertexLabel(name)
+                if (requestLabel.readOnly)
+                    vertexLabelMaker.setStatic()
+                if (requestLabel.partitioned)
+                    vertexLabelMaker.partition()
+                val vertexLabel = vertexLabelMaker.make()
+                vertexLabel
+            }
         }
-        val (vertexLabel, properties) = if (label != null) {
-            management.changeName(label, requestLabel.name)
-            label to emptyList()
-        } else {
-            val vertexLabelMaker = management.makeVertexLabel(requestLabel.name)
-            if (requestLabel.readOnly)
-                vertexLabelMaker.setStatic()
-            if (requestLabel.partitioned)
-                vertexLabelMaker.partition()
-            val vertexLabel = vertexLabelMaker.make()
-            vertexLabel to requestLabel.propertiesList
-                .map { getOrCreateVertexProperty(management, vertexLabel, it) }
-        }
+        val properties = requestLabel.propertiesList.map { getOrCreateVertexProperty(management, vertexLabel, it) }
         val response = createVertexLabelProto(vertexLabel, properties)
         management.commit()
         return response
@@ -83,9 +89,56 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
 
     override fun ensureCompositeIndexByVertexLabel(
         management: JanusGraphManagement,
-        vertexLabel: VertexLabel,
-        index: CompositeVertexIndex
+        requestLabel: VertexLabel,
+        requestIndex: CompositeVertexIndex
     ): CompositeVertexIndex? {
-        TODO("not implemented")
+        val label = getVertexLabel(management, requestLabel) ?: throw NullPointerException("vertex should exists")
+
+        val keys = requestIndex.propertiesList.map { management.getPropertyKey(it.name) }
+        val builder = management.buildIndex(requestIndex.name, Vertex::class.java)
+            .indexOnly(label)
+
+        keys.forEach { builder.addKey(it) }
+
+        val graphIndex = builder.buildCompositeIndex()
+        val properties = graphIndex.fieldKeys.map { createVertexPropertyProto(it) }
+
+        val compositeVertexIndex = CompositeVertexIndex.newBuilder()
+            .setName(graphIndex.name())
+            .addAllProperties(properties)
+            .build()
+        management.commit()
+        return compositeVertexIndex
+    }
+
+    private fun getVertexLabelTx(
+        tx: StandardJanusGraphTx,
+        label: VertexLabel
+    ): org.janusgraph.core.VertexLabel? =
+        if (label.hasId()) {
+            getVertexLabels(tx).firstOrNull { it.longId() == label.id.value }
+                ?: throw IllegalArgumentException("No vertexLabel found with id")
+        } else {
+            tx.getVertexLabel(label.name)
+        }
+
+    override fun getCompositeIndicesByVertexLabel(
+        graph: StandardJanusGraph,
+        requestLabel: VertexLabel
+    ): List<CompositeVertexIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val label = getVertexLabelTx(tx, requestLabel)
+        val graphIndexes = getGraphIndices(tx, Vertex::class.java)
+        val indices = graphIndexes
+            .filter { it.isCompositeIndex }
+            .filter { it.schemaTypeConstraint == label }
+            .map {
+                CompositeVertexIndex.newBuilder()
+                    .setName(it.name)
+                    .addProperties(VertexProperty.getDefaultInstance())
+                    .build()
+            }
+        tx.rollback()
+        return indices
     }
 }

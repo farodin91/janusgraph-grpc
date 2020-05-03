@@ -22,8 +22,8 @@ class ManagementForEdgeLabelsImpl(
             responseObserver?.onError(Throwable("Incorrect context"))
             return
         }
-        val vertexLabelsByName = managementServer.getEdgeLabelsByName(management, request.name)
-        vertexLabelsByName.forEach { responseObserver?.onNext(it) }
+        val labels = managementServer.getEdgeLabelsByName(management, request.name)
+        labels.forEach { responseObserver?.onNext(it) }
         responseObserver?.onCompleted()
     }
 
@@ -33,8 +33,8 @@ class ManagementForEdgeLabelsImpl(
             responseObserver?.onError(Throwable("Incorrect context"))
             return
         }
-        val vertexLabelsByName = managementServer.getEdgeLabels(management)
-        vertexLabelsByName.forEach { responseObserver?.onNext(it) }
+        val labels = managementServer.getEdgeLabels(management)
+        labels.forEach { responseObserver?.onNext(it) }
         responseObserver?.onCompleted()
     }
 
@@ -50,6 +50,24 @@ class ManagementForEdgeLabelsImpl(
         }
         val edgeLabel = managementServer.ensureEdgeLabel(management, request.label)
         responseObserver?.onNext(edgeLabel)
+        responseObserver?.onCompleted()
+    }
+
+    override fun getCompositeIndicesByEdgeLabel(
+        request: GetCompositeIndicesByEdgeLabelRequest?,
+        responseObserver: StreamObserver<CompositeEdgeIndex>?
+    ) {
+        val graph = contextManager.getGraph(request?.context)
+        if (graph == null) {
+            responseObserver?.onError(Throwable("Incorrect context"))
+            return
+        }
+        if (request?.edgeLabel == null) {
+            responseObserver?.onError(Throwable("Not set edgeLabel"))
+            return
+        }
+        val indices = managementServer.getCompositeIndicesByEdgeLabel(graph, request.edgeLabel)
+        indices.forEach { responseObserver?.onNext(it) }
         responseObserver?.onCompleted()
     }
 }

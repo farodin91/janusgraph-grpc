@@ -1,9 +1,13 @@
 package org.janusgraph.grpc.server
 
+import org.apache.tinkerpop.gremlin.structure.Edge
+import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.schema.JanusGraphManagement
-import org.janusgraph.grpc.EdgeLabel
-import org.janusgraph.grpc.EdgeProperty
+import org.janusgraph.graphdb.database.StandardJanusGraph
+import org.janusgraph.graphdb.transaction.StandardJanusGraphTx
+import org.janusgraph.grpc.*
+import java.lang.NullPointerException
 
 
 class ManagementForEdgeLabels: IManagementForEdgeLabels {
@@ -34,25 +38,26 @@ class ManagementForEdgeLabels: IManagementForEdgeLabels {
 
     override fun ensureEdgeLabel(management: JanusGraphManagement, requestLabel: EdgeLabel): EdgeLabel? {
         val label = getEdgeLabel(management, requestLabel)
-        if (label?.name() == requestLabel.name) {
-            return createEdgeLabelProto(label!!, label.mappedProperties().toList())
+        val name = requestLabel.name ?: throw NullPointerException("name should not be null")
+        val vertexLabel = when {
+            label?.name() == name -> label
+            label != null -> {
+                management.changeName(label, name)
+                label
+            }
+            else -> {
+                management.makeEdgeLabel(name).make()
+            }
         }
-        val (edgeLabel, properties) = if (label != null) {
-            management.changeName(label, requestLabel.name)
-            label to emptyList()
-        } else {
-            val vertexLabel = management.makeEdgeLabel(requestLabel.name).make()
-            vertexLabel to requestLabel.propertiesList
-                .map { getOrCreateEdgeProperty(management, vertexLabel, it) }
-        }
-        val response = createEdgeLabelProto(edgeLabel, properties)
+        val properties = requestLabel.propertiesList.map { getOrCreateEdgeProperty(management, vertexLabel, it) }
+        val response = createEdgeLabelProto(vertexLabel, properties)
         management.commit()
         return response
     }
 
     private fun getOrCreateEdgeProperty(
         management: JanusGraphManagement,
-        vertexLabel: org.janusgraph.core.EdgeLabel,
+        label: org.janusgraph.core.EdgeLabel,
         property: EdgeProperty
     ): PropertyKey {
         val propertyKey =
@@ -61,7 +66,65 @@ class ManagementForEdgeLabels: IManagementForEdgeLabels {
                 .dataType(convertDataTypeToJavaClass(property.dataType))
                 .make()
 
-        management.addProperties(vertexLabel, propertyKey)
+        val connections = label.mappedProperties()
+        if (!connections.contains(propertyKey)){
+            management.addProperties(label, propertyKey)
+        }
         return propertyKey
+    }
+
+    override fun ensureCompositeIndexByEdgeLabel(
+        management: JanusGraphManagement,
+        requestLabel: EdgeLabel,
+        requestIndex: CompositeEdgeIndex
+    ): CompositeEdgeIndex? {
+        val label = getEdgeLabel(management, requestLabel) ?: throw NullPointerException("vertex should exists")
+
+        val keys = requestIndex.propertiesList.map { management.getPropertyKey(it.name) }
+        val builder = management.buildIndex(requestIndex.name, Edge::class.java)
+            .indexOnly(label)
+
+        keys.forEach { builder.addKey(it) }
+
+        val graphIndex = builder.buildCompositeIndex()
+        val properties = graphIndex.fieldKeys.map { createEdgePropertyProto(it) }
+
+        val compositeIndex = CompositeEdgeIndex.newBuilder()
+            .setName(graphIndex.name())
+            .addAllProperties(properties)
+            .build()
+        management.commit()
+        return compositeIndex
+    }
+
+    private fun getEdgeLabelTx(
+        tx: StandardJanusGraphTx,
+        label: EdgeLabel
+    ): org.janusgraph.core.EdgeLabel? =
+        if (label.hasId()) {
+            getEdgeLabels(tx).firstOrNull { it.longId() == label.id.value }
+                ?: throw IllegalArgumentException("No vertexLabel found with id")
+        } else {
+            tx.getEdgeLabel(label.name)
+        }
+
+    override fun getCompositeIndicesByEdgeLabel(
+        graph: StandardJanusGraph,
+        requestLabel: EdgeLabel
+    ): List<CompositeEdgeIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val label = getEdgeLabelTx(tx, requestLabel)
+        val graphIndexes = getGraphIndices(tx, Edge::class.java)
+        val indices = graphIndexes
+            .filter { it.isCompositeIndex }
+            .filter { it.schemaTypeConstraint == label }
+            .map {
+                CompositeEdgeIndex.newBuilder()
+                    .setName(it.name)
+                    .addProperties(EdgeProperty.getDefaultInstance())
+                    .build()
+            }
+        tx.rollback()
+        return indices
     }
 }

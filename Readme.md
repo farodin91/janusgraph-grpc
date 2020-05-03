@@ -29,19 +29,21 @@ Not started yet.
     * [x] properties
         * [x] name
         * [x] dataType
-        * [ ] cardinality
-        * [ ] multiple properties
-    * [ ] composite indices
-        * [ ] name
+        * [x] cardinality
+        * [x] multiple properties
+    * [x] composite indices
+        * [x] name
         * [ ] properties
-        * [ ] multiple indices
         * [ ] unique
+        * [ ] multiple indices
+        * [ ] status
     * [ ] mixed indices
         * [ ] name
         * [ ] properties
-        * [ ] multiple indices
         * [ ] unique
-        * [ ] backend
+        * [ ] backend (different)
+        * [ ] multiple indices
+        * [ ] status
 * [x] Get Vertices
     * [x] id
     * [x] name
@@ -50,20 +52,9 @@ Not started yet.
     * [ ] edges
     * [x] properties
         * [x] name
-        * [ ] dataType
-        * [ ] cardinality
-        * [ ] multiple properties
-    * [ ] composite indices
-        * [ ] name
-        * [ ] properties
-        * [ ] multiple indices
-        * [ ] unique
-    * [ ] mixed indices
-        * [ ] name
-        * [ ] properties
-        * [ ] multiple indices
-        * [ ] unique
-        * [ ] backend
+        * [x] dataType
+        * [x] cardinality
+        * [x] multiple properties
 * [x] Ensure Vertices (create)
     * [x] name
     * [x] readonly -> static
@@ -72,25 +63,25 @@ Not started yet.
     * [x] properties
         * [x] name
         * [x] dataType
-        * [ ] cardinality
-        * [ ] multiple properties
-    * [ ] composite indices
-        * [ ] name
-        * [ ] properties
-        * [ ] multiple indices
+        * [x] cardinality
+        * [x] multiple properties
+    * [x] composite indices
+        * [x] name
+        * [x] properties
         * [ ] unique
+        * [ ] multiple indices
     * [ ] mixed indices
         * [ ] name
         * [ ] properties
-        * [ ] multiple indices
         * [ ] unique
-        * [ ] backend
+        * [ ] backend (different)
+        * [ ] multiple indices
 * [x] Ensure Vertices (update)
     * [x] id
     * [x] name
     * [ ] partitioned
     * [ ] edges
-    * [ ] properties
+    * [x] properties
         * [ ] name
         * [ ] dataType
         * [ ] cardinality
@@ -118,8 +109,8 @@ Not started yet.
         * [x] name
         * [x] dataType
         * [ ] multiple properties
-    * [ ] composite indices
-        * [ ] name
+    * [x] composite indices
+        * [x] name
         * [ ] properties
         * [ ] multiple indices
         * [ ] unique
@@ -136,19 +127,8 @@ Not started yet.
     * [ ] multiplicity
     * [x] properties
         * [x] name
-        * [ ] dataType
-        * [ ] multiple properties
-    * [ ] composite indices
-        * [ ] name
-        * [ ] properties
-        * [ ] multiple indices
-        * [ ] unique
-    * [ ] mixed indices
-        * [ ] name
-        * [ ] properties
-        * [ ] multiple indices
-        * [ ] unique
-        * [ ] backend
+        * [x] dataType
+        * [x] multiple properties
 * [x] Ensure Edges (create)
     * [x] name
     * [ ] direction
@@ -156,10 +136,10 @@ Not started yet.
     * [x] properties
         * [x] name
         * [x] dataType
-        * [ ] multiple properties
-    * [ ] composite indices
-        * [ ] name
-        * [ ] properties
+        * [x] multiple properties
+    * [x] composite indices
+        * [x] name
+        * [x] properties
         * [ ] multiple indices
         * [ ] unique
     * [ ] mixed indices
@@ -172,7 +152,7 @@ Not started yet.
     * [x] name
     * [ ] direction
     * [ ] multiplicity
-    * [ ] properties
+    * [x] properties
         * [ ] name
         * [ ] dataType
         * [ ] multiple properties
@@ -211,9 +191,14 @@ Not started yet.
     * [ ] propertyKey changes
     * [ ] index changes
 * [x] DefaultJanusGraphManager as ContextManager
+    * [ ] tests
 * [ ] DefaultJanusGraphManager with ConfigureGraphFactory
+    * [ ] tests
 * [x] Default values gremlin server settings
+    * [ ] tests
 * [x] Grpc server on start JanusGraphServer
+    * [ ] tests
+* [ ] logging
 
 ### Unsorted
 
