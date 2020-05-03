@@ -5,3 +5,4 @@ gradle
 *.bat
 gradlew
 client/target
+client/src/management*.rs
