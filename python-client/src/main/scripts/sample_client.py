@@ -8,8 +8,9 @@ import grpc._channel as ch
 # import route_guide_pb2
 # import route_guide_pb2_grpc
 # import route_guide_resources
-from enum import Enum
+from typing import Union
 import argparse
+from enum import Enum
 
 import janusgraph_grpc_python.management.management_pb2 as management_pb2
 import janusgraph_grpc_python.management.management_pb2_grpc as management_pb2_grpc
@@ -88,49 +89,50 @@ import janusgraph_grpc_python.management.management_pb2_grpc as management_pb2_g
 #         print("Received message %s at %s" %
 #               (response.message, response.location))
 #
+#
+# def run():
+#     # NOTE(gRPC Python Team): .close() is possible on a channel and should be
+#     # used in circumstances in which the with statement does not fit the needs
+#     # of the code.
+#
+#     host = "localhost"
+#     port = "10182"
+#
+#     channel = grpc.insecure_channel(f'{host}:{port}')
+#
+#     content_stub = management_pb2_grpc.AccessContextStub(channel)
+#     edge_management_stub = management_pb2_grpc.ManagementForEdgeLabelsStub(channel)
+#     stub = management_pb2_grpc.ManagementForVertexLabelsStub(channel)
+#
+#     context = management_pb2.JanusGraphContext()
+#     context.set_graphName("graph")
+#     request = management_pb2.GetVertexLabelsRequest()
+#     request.set_context(context)
+#
+#     response = stub.GetVertexLabels(request)
+#
+#     #
+#     # with grpc.insecure_channel(f'{host}:{port}') as channel:
+#     #
+#     #     content_stub = management_pb2_grpc.AccessContextStub(channel)
+#     #     edge_management_stub = management_pb2_grpc.ManagementForEdgeLabelsStub(channel)
+#     #     vertex_management_stub = management_pb2_grpc.ManagementForVertexLabelsStub(channel)
+#     #
+#     #     stub = route_guide_pb2_grpc.RouteGuideStub(channel)
+#     #     print("-------------- GetFeature --------------")
+#     #     guide_get_feature(stub)
+#     #     print("-------------- ListFeatures --------------")
+#     #     guide_list_features(stub)
+#     #     print("-------------- RecordRoute --------------")
+#     #     guide_record_route(stub)
+#     #     print("-------------- RouteChat --------------")
+#     #     guide_route_chat(stub)
+#
 
-def run():
-    # NOTE(gRPC Python Team): .close() is possible on a channel and should be
-    # used in circumstances in which the with statement does not fit the needs
-    # of the code.
 
-    host = "localhost"
-    port = "10182"
-
-    channel = grpc.insecure_channel(f'{host}:{port}')
-
-    content_stub = management_pb2_grpc.AccessContextStub(channel)
-    edge_management_stub = management_pb2_grpc.ManagementForEdgeLabelsStub(channel)
-    stub = management_pb2_grpc.ManagementForVertexLabelsStub(channel)
-
-    context = management_pb2.JanusGraphContext()
-    context.set_graphName("graph")
-    request = management_pb2.GetVertexLabelsRequest()
-    request.set_context(context)
-
-    response = stub.GetVertexLabels(request)
-
-    #
-    # with grpc.insecure_channel(f'{host}:{port}') as channel:
-    #
-    #     content_stub = management_pb2_grpc.AccessContextStub(channel)
-    #     edge_management_stub = management_pb2_grpc.ManagementForEdgeLabelsStub(channel)
-    #     vertex_management_stub = management_pb2_grpc.ManagementForVertexLabelsStub(channel)
-    #
-    #     stub = route_guide_pb2_grpc.RouteGuideStub(channel)
-    #     print("-------------- GetFeature --------------")
-    #     guide_get_feature(stub)
-    #     print("-------------- ListFeatures --------------")
-    #     guide_list_features(stub)
-    #     print("-------------- RecordRoute --------------")
-    #     guide_record_route(stub)
-    #     print("-------------- RouteChat --------------")
-    #     guide_route_chat(stub)
-
-
-class CommandAction(argparse.Action):
+class GraphOperationAction(argparse.Action):
     def __init__(self, *args, **kwargs):
-        super(CommandAction, self).__init__(*args, **kwargs)
+        super(GraphOperationAction, self).__init__(*args, **kwargs)
         self.nargs = 2
 
     def __call__(self, parser, namespace, values, option_string):
@@ -147,11 +149,11 @@ class CommandAction(argparse.Action):
         """
         lst = getattr(namespace, self.dest, []) or []
         a, b = values
-        lst.append(Command(CommandType().__set__(a), str(b)))
+        lst.append(GraphOperation(GraphOperationType().__set__(a), str(b)))
         setattr(namespace, self.dest, lst)
 
 
-class ManagementElement(object):
+class GraphElement(object):
     def __init__(self, element, operation, metadata):
         self.element = element
         self.operation = operation
@@ -186,7 +188,7 @@ class ManagementElement(object):
         return self.element
 
 
-class VertexLabel(ManagementElement):
+class VertexLabel(GraphElement):
     def __init__(self, operation, metadata):
         super().__init__("VertexLabel", operation, metadata)
 
@@ -205,7 +207,7 @@ class VertexLabel(ManagementElement):
             return self.service.GetVertexLabelsByName(request)
 
 
-class EdgeLabel(ManagementElement):
+class EdgeLabel(GraphElement):
     def __init__(self, operation, metadata):
         super().__init__("EdgeLabel", operation, metadata)
 
@@ -222,7 +224,7 @@ class EdgeLabel(ManagementElement):
             return self.service.GetEdgeLabelsByName(request)
 
 
-class Contexts(ManagementElement):
+class Contexts(GraphElement):
     def __init__(self, operation, metadata):
         super().__init__("ContextAction", operation, metadata)
 
@@ -239,7 +241,7 @@ class Contexts(ManagementElement):
             return self.service.GetContextByGraphName(request)
 
 
-class CommandType:
+class GraphOperationType:
 
     command_types = ["VertexLabel", "EdgeLabel", "ContextAction"]
 
@@ -252,14 +254,17 @@ class CommandType:
         if name in self.command_types and getattr(self, name) is not None:
             return getattr(self, name)
         else:
-            raise NotImplementedError("Implemented only VertexLabel/EdgeLabel/ContextAction support for CommandType "
-                                      "got " + name)
+            if name not in self.command_types:
+                raise NotImplementedError("Implemented only VertexLabel/EdgeLabel/ContextAction support "
+                                          "for CommandType got " + name)
+            else:
+                raise KeyError(f"Command type initialized as something but not {name}")
 
-    def get(self):
+    def get(self) -> Union[VertexLabel, EdgeLabel, Contexts]:
         """ Returns the object which isn't null
 
         Returns:
-            ManagementElement
+            GraphElement
         """
 
         for name in self.command_types:
@@ -281,16 +286,16 @@ class CommandType:
         return self
 
 
-class Command:
+class GraphOperation:
 
-    def __init__(self, command_type, command_metadata):
+    def __init__(self, graph_operation_type, command_metadata):
         """
 
         Args:
-            command_type (CommandType):
+            graph_operation_type (GraphOperationType):
             command_metadata (str):
         """
-        self.management_action = command_type.get()
+        self.graph_operation = graph_operation_type.get()
         self.metadata = command_metadata
 
         self.operation = None
@@ -299,22 +304,33 @@ class Command:
         self.processor = None
 
     def __repr__(self):
-        return 'Command(%s, %s)' % (str(self.management_action), self.metadata)
+        return 'Command(%s, %s)' % (str(self.graph_operation), self.metadata)
 
     def set_operation(self, op):
-        self.operation = op
+        if op in ["GET", "PUT"]:
+            self.operation = op
+        else:
+            raise NotImplementedError("Implemented only GET and PUT operation.")
 
     def set_channel(self, channel):
         self.channel = channel
 
     def get_processor(self):
+        """This method gets the processor. A Processor is a Class which
+        specifies weather its processing Vertex, Edge, Context etc
+
+        Returns:
+
+        """
 
         if self.operation is None:
             raise ValueError("Call set_operation to set the OPERATION type before calling apply(stub) method")
+        if self.channel is None:
+            raise ValueError("Call set_channel to set the CHANNEL type before calling get_processor() method")
         if not isinstance(self.metadata, str):
             raise ValueError("String dataType expected for metadata either ALL or name of element")
 
-        self.processor = self.management_action(self.operation, self.metadata)
+        self.processor = self.graph_operation(self.operation, self.metadata)
         self.processor.set_service(self.__generate_service__())
         return self.processor
 
@@ -342,7 +358,7 @@ class Command:
         if self.operation is None:
             raise ValueError("Call set_operation to set the OPERATION type before calling apply(stub) method")
 
-        obj = self.management_action(self.operation, self.metadata)
+        obj = self.graph_operation(self.operation, self.metadata)
 
         if isinstance(self.metadata, str):
             return obj.operate()
@@ -354,7 +370,7 @@ class JanusGraphArguments(Enum):
     host = "localhost"
     port = 10182
     op = "GET"
-    cmd = Command
+    cmd = GraphOperation
 
     def __str__(self):
         return self.value
@@ -371,29 +387,29 @@ if __name__ == '__main__':
     parser.add_argument('--host', type=str)
     parser.add_argument('--port', default=10182, type=int)
     parser.add_argument('--op', type=str, default="GET")
-    parser.add_argument('--arg', action=CommandAction)
+    parser.add_argument('--arg', action=GraphOperationAction)
 
     args = parser.parse_args()
 
     host = args.host
     port = args.port
     op = args.op
-    arg = args.arg[0]
+    action = args.arg[0]
 
     print(host)
     print(port)
     print(op)
-    print(arg)
-    print(type(arg))
+    print(action)
+    print(type(action))
 
     print("=======================")
 
     channel = grpc.insecure_channel(f'{host}:{port}')
 
-    arg.set_operation(op)
-    arg.set_channel(channel)
+    action.set_operation(op)
+    action.set_channel(channel)
 
-    processor = arg.get_processor()
+    processor = action.get_processor()
 
     print("================")
     print(processor)
@@ -408,6 +424,8 @@ if __name__ == '__main__':
             print(f'response from server: ID=${resp.id} name=${resp.name} property=${resp.properties.name}')
         else:
             print(resp)
+
+    channel.close()
 
     # if isinstance(response_it, ch._MultiThreadedRendezvous):
     #     # Its a Streaming response
