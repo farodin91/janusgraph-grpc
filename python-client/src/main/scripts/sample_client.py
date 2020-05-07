@@ -8,7 +8,7 @@ import grpc._channel as ch
 # import route_guide_pb2
 # import route_guide_pb2_grpc
 # import route_guide_resources
-from typing import Union
+from typing import Union, Optional
 import argparse
 from enum import Enum
 
@@ -130,26 +130,76 @@ import janusgraph_grpc_python.management.management_pb2_grpc as management_pb2_g
 #
 
 
+class GraphIndexer:
+    def __init__(self):
+        pass
+
+
+class GraphOperationMetadata:
+    RESERVED_KEYWORDS = ["ALL", "INDEX"]
+    # Metadata can take the form or either ALL or INDEX (For Indexing purpose) or String which means
+    # retrieval of Graph Element which can either be VertexLabel, EdgeLabel or Property
+
+    RETRIEVER = None
+    INDEXER = None
+
+    def __init__(self):
+        pass
+
+    def set(self, metadata):
+        if metadata not in self.RESERVED_KEYWORDS:
+            self.RETRIEVER = GraphElementRetriever().set(metadata)
+        else:
+            if metadata == "ALL":
+                self.RETRIEVER = GraphElementRetriever().set(metadata)
+            else:
+                pass
+        return self
+
+
+class GraphElementRetriever:
+    SINGLE = False
+    ALL = False
+    name = None
+
+    def __init__(self):
+        pass
+
+    def set(self, retriever):
+        if retriever == "ALL":
+            self.ALL = True
+        else:
+            self.SINGLE = True
+            self.name = retriever
+        return self
+
+
 class GraphOperationAction(argparse.Action):
     def __init__(self, *args, **kwargs):
         super(GraphOperationAction, self).__init__(*args, **kwargs)
-        self.nargs = 2
+        self.nargs = "*"
 
-    def __call__(self, parser, namespace, values, option_string):
+    def __call__(self, parser, namespace, values, option_string=None):
         """
 
         Args:
             parser (ArgumentParser):
             namespace (Namespace):
             values Union[_Text, Sequence[Any], None]:
-            option_string Optional[_Text]:
+            option_string (Optional[_Text]):
 
         Returns:
 
         """
         lst = getattr(namespace, self.dest, []) or []
-        a, b = values
-        lst.append(GraphOperation(GraphOperationType().__set__(a), str(b)))
+        print("--------------")
+        print(lst)
+        print(values)
+        a, *b = values
+        print(a, b)
+        print(values)
+        print("--------------")
+        lst.append(GraphOperation(GraphOperationType().set(a), str(b)))
         setattr(namespace, self.dest, lst)
 
 
@@ -188,7 +238,7 @@ class GraphElement(object):
         return self.element
 
 
-class VertexLabel(GraphElement):
+class Vertex(GraphElement):
     def __init__(self, operation, metadata):
         super().__init__("VertexLabel", operation, metadata)
 
@@ -196,18 +246,26 @@ class VertexLabel(GraphElement):
         self.metadata = metadata
 
     def __get__(self):
-        context = management_pb2.JanusGraphContext(graphName="graph")
-        request = management_pb2.GetVertexLabelsRequest(context=context)
+        context = management_pb2.JanusGraphContext(graphName="graph_berkleydb")
 
         if self.metadata == "ALL":
             print("Getting GetVertexLabels")
+            request = management_pb2.GetVertexLabelsRequest(context=context)
             return self.service.GetVertexLabels(request)
         else:
             print("Getting GetVertexLabelByName")
+            request = management_pb2.GetVertexLabelsByNameRequest(context=context, name=self.metadata)
             return self.service.GetVertexLabelsByName(request)
 
+    def __put__(self):
+        context = management_pb2.JanusGraphContext(graphName="graph_berkleydb")
+        label = management_pb2.VertexLabel(name=self.metadata, readOnly=False, partitioned=False)
+        request = management_pb2.EnsureVertexLabelRequest(context=context, label=label)
 
-class EdgeLabel(GraphElement):
+        return self.service.EnsureVertexLabel(request)
+
+
+class Edge(GraphElement):
     def __init__(self, operation, metadata):
         super().__init__("EdgeLabel", operation, metadata)
 
@@ -215,12 +273,13 @@ class EdgeLabel(GraphElement):
         self.metadata = metadata
 
     def __get__(self):
-        context = management_pb2.JanusGraphContext(graphName="graph")
-        request = management_pb2.GetVertexLabelsRequest(context=context)
+        context = management_pb2.JanusGraphContext(graphName="graph_berkleydb")
 
         if self.metadata == "ALL":
+            request = management_pb2.GetEdgeLabelsRequest(context=context)
             return self.service.GetEdgeLabels(request)
         else:
+            request = management_pb2.GetEdgeLabelsByNameRequest(context=context, name=self.metadata)
             return self.service.GetEdgeLabelsByName(request)
 
 
@@ -232,12 +291,13 @@ class Contexts(GraphElement):
         self.metadata = metadata
 
     def __get__(self):
-        context = management_pb2.JanusGraphContext(graphName="graph")
-        request = management_pb2.GetVertexLabelsRequest(context=context)
+        context = management_pb2.JanusGraphContext(graphName="graph_berkleydb")
 
         if self.metadata == "ALL":
+            request = management_pb2.GetContextsRequest()
             return self.service.GetContexts(request)
         else:
+            request = management_pb2.GetContextByGraphNameRequest(name="graph_berkleydb")
             return self.service.GetContextByGraphName(request)
 
 
@@ -260,7 +320,7 @@ class GraphOperationType:
             else:
                 raise KeyError(f"Command type initialized as something but not {name}")
 
-    def get(self) -> Union[VertexLabel, EdgeLabel, Contexts]:
+    def get(self) -> Union[Vertex, Edge, Contexts]:
         """ Returns the object which isn't null
 
         Returns:
@@ -271,12 +331,12 @@ class GraphOperationType:
             if getattr(self, name) is not None:
                 return getattr(self, name)
 
-    def __set__(self, instance):
+    def set(self, instance):
         if instance in self.command_types:
             if instance == "VertexLabel":
-                setattr(self, instance, VertexLabel)
+                setattr(self, instance, Vertex)
             elif instance == "EdgeLabel":
-                setattr(self, instance, EdgeLabel)
+                setattr(self, instance, Edge)
             else:
                 setattr(self, instance, Contexts)
         else:
@@ -382,6 +442,8 @@ if __name__ == '__main__':
     # python sample_client.py --host localhost --port 10182 --op GET --arg VertexLabel ALL
     # python sample_client.py --host localhost --port 10182 --op GET --arg VertexLabel 'name'
     # python sample_client.py --host localhost --port 10182 --op PUT --arg VertexLabel 'name' <To Define how to do PUT>
+    from collections.abc import Iterable
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--host', type=str)
@@ -416,14 +478,19 @@ if __name__ == '__main__':
 
     response_it = processor.operate()
 
-    print(response_it)
     print(type(response_it))
 
-    for resp in response_it:
-        if str(processor) != "ContextAction":
-            print(f'response from server: ID=${resp.id} name=${resp.name} property=${resp.properties.name}')
-        else:
-            print(resp)
+    if isinstance(response_it, Iterable):
+        for resp in response_it:
+            print("I'm inside loop")
+            if str(processor) != "ContextAction":
+                print(f'response from server: ID=${resp.id} name=${resp.name}')
+                print(f"Response is ${resp}")
+            else:
+                print(resp)
+
+    else:
+        print(response_it)
 
     channel.close()
 
