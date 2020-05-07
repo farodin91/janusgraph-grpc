@@ -1,15 +1,17 @@
 package org.janusgraph.grpc.server
 
-import org.apache.tinkerpop.gremlin.structure.Edge
 import org.apache.tinkerpop.gremlin.structure.Vertex
+import org.janusgraph.core.Cardinality
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.schema.JanusGraphManagement
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx
+import org.janusgraph.graphdb.types.CompositeIndexType
+import org.janusgraph.graphdb.types.MixedIndexType
 import org.janusgraph.grpc.CompositeVertexIndex
+import org.janusgraph.grpc.MixedVertexIndex
 import org.janusgraph.grpc.VertexLabel
 import org.janusgraph.grpc.VertexProperty
-import java.lang.NullPointerException
 
 class ManagementForVertexLabels : IManagementForVertexLabels {
 
@@ -98,6 +100,9 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
         val builder = management.buildIndex(requestIndex.name, Vertex::class.java)
             .indexOnly(label)
 
+        if (requestIndex.unique)
+            builder.unique()
+
         keys.forEach { builder.addKey(it) }
 
         val graphIndex = builder.buildCompositeIndex()
@@ -106,6 +111,7 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
         val compositeVertexIndex = CompositeVertexIndex.newBuilder()
             .setName(graphIndex.name())
             .addAllProperties(properties)
+            .setUnique(graphIndex.isUnique)
             .build()
         management.commit()
         return compositeVertexIndex
@@ -130,12 +136,59 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
         val label = getVertexLabelTx(tx, requestLabel)
         val graphIndexes = getGraphIndices(tx, Vertex::class.java)
         val indices = graphIndexes
-            .filter { it.isCompositeIndex }
+            .filterIsInstance<CompositeIndexType>()
             .filter { it.schemaTypeConstraint == label }
             .map {
                 CompositeVertexIndex.newBuilder()
                     .setName(it.name)
-                    .addProperties(VertexProperty.getDefaultInstance())
+                    .addAllProperties(it.fieldKeys.map { property -> createVertexPropertyProto(property.fieldKey) })
+                    .setUnique(it.cardinality == Cardinality.SINGLE)
+                    .build()
+            }
+        tx.rollback()
+        return indices
+    }
+
+    override fun ensureMixedIndexByVertexLabel(
+        management: JanusGraphManagement,
+        requestLabel: VertexLabel,
+        requestIndex: MixedVertexIndex
+    ): MixedVertexIndex? {
+        val label = getVertexLabel(management, requestLabel) ?: throw NullPointerException("vertex should exists")
+
+        val keys = requestIndex.propertiesList.map { management.getPropertyKey(it.name) }
+        val builder = management.buildIndex(requestIndex.name, Vertex::class.java)
+            .indexOnly(label)
+
+        keys.forEach { builder.addKey(it) }
+
+        val graphIndex = builder.buildMixedIndex(requestIndex.backend)
+        val properties = graphIndex.fieldKeys.map { createVertexPropertyProto(it) }
+
+        val compositeVertexIndex = MixedVertexIndex.newBuilder()
+            .setName(graphIndex.name())
+            .addAllProperties(properties)
+            .setBackend(graphIndex.backingIndex)
+            .build()
+        management.commit()
+        return compositeVertexIndex
+    }
+
+    override fun getMixedIndicesByVertexLabel(
+        graph: StandardJanusGraph,
+        requestLabel: VertexLabel
+    ): List<MixedVertexIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val label = getVertexLabelTx(tx, requestLabel)
+        val graphIndexes = getGraphIndices(tx, Vertex::class.java)
+        val indices = graphIndexes
+            .filterIsInstance<MixedIndexType>()
+            .filter { it.schemaTypeConstraint == label }
+            .map {
+                MixedVertexIndex.newBuilder()
+                    .setName(it.name)
+                    .setBackend(it.backingIndexName)
+                    .addAllProperties(it.fieldKeys.map { property -> createVertexPropertyProto(property.fieldKey) })
                     .build()
             }
         tx.rollback()

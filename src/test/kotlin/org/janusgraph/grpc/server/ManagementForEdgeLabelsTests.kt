@@ -1,18 +1,22 @@
 package org.janusgraph.grpc.server
 
 import com.google.protobuf.Int64Value
+import com.sun.org.apache.xpath.internal.operations.Bool
 import org.janusgraph.core.JanusGraph
 import org.janusgraph.grpc.*
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Path
 
 class ManagementForEdgeLabelsTests {
 
-    private fun createDefaults() =
-        ManagementForEdgeLabels() to JanusGraphTestUtils.getJanusGraph()
+    private fun createDefaults(tempDir: Path? = null) =
+        ManagementForEdgeLabels() to JanusGraphTestUtils.getJanusGraph(tempDir)
 
     private fun buildLabel(
         name: String = "test",
@@ -53,7 +57,7 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request)
 
-        Assertions.assertEquals("test", edgeLabel?.name)
+        assertEquals("test", edgeLabel?.name)
     }
 
     @Test
@@ -65,7 +69,7 @@ class ManagementForEdgeLabelsTests {
         managementServer.ensureEdgeLabel(graph.openManagement(), request)
         val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request)
 
-        Assertions.assertEquals("test", edgeLabel?.name)
+        assertEquals("test", edgeLabel?.name)
     }
 
     @Test
@@ -77,9 +81,9 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request2)
 
-        Assertions.assertEquals("test1", ensureEdgeLabel?.name)
-        Assertions.assertEquals("test2", edgeLabel?.name)
-        Assertions.assertEquals(ensureEdgeLabel?.id, edgeLabel?.id)
+        assertEquals("test1", ensureEdgeLabel?.name)
+        assertEquals("test2", edgeLabel?.name)
+        assertEquals(ensureEdgeLabel?.id, edgeLabel?.id)
     }
 
     @ParameterizedTest
@@ -92,12 +96,12 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request)
 
-        Assertions.assertEquals(1, edgeLabel?.propertiesCount)
-        Assertions.assertEquals(
+        assertEquals(1, edgeLabel?.propertiesCount)
+        assertEquals(
             propertyName,
             edgeLabel?.propertiesList?.firstOrNull()?.name
         )
-        Assertions.assertEquals(
+        assertEquals(
             propertyDataType,
             edgeLabel?.propertiesList?.firstOrNull()?.dataType
         )
@@ -116,12 +120,12 @@ class ManagementForEdgeLabelsTests {
         managementServer.ensureEdgeLabel(graph.openManagement(), request)
         val edgeLabel = managementServer.ensureEdgeLabel(graph.openManagement(), request)
 
-        Assertions.assertEquals(1, edgeLabel?.propertiesCount)
-        Assertions.assertEquals(
+        assertEquals(1, edgeLabel?.propertiesCount)
+        assertEquals(
             propertyName,
             edgeLabel?.propertiesList?.firstOrNull()?.name
         )
-        Assertions.assertEquals(
+        assertEquals(
             PropertyDataType.Int32,
             edgeLabel?.propertiesList?.firstOrNull()?.dataType
         )
@@ -136,7 +140,7 @@ class ManagementForEdgeLabelsTests {
 
         val label = managementServer.ensureEdgeLabel(graph.openManagement(), request)
 
-        Assertions.assertEquals(numberOfProperties, label?.propertiesCount)
+        assertEquals(numberOfProperties, label?.propertiesCount)
     }
 
     @Test
@@ -150,8 +154,8 @@ class ManagementForEdgeLabelsTests {
 
         val label = managementServer.ensureEdgeLabel(graph.openManagement(), request2)
 
-        Assertions.assertEquals(1, label?.propertiesCount)
-        Assertions.assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
+        assertEquals(1, label?.propertiesCount)
+        assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
     }
 
     @ParameterizedTest
@@ -166,9 +170,9 @@ class ManagementForEdgeLabelsTests {
 
         val label = managementServer.ensureEdgeLabel(graph.openManagement(), request)
 
-        Assertions.assertEquals(1, label?.propertiesCount)
-        Assertions.assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
-        Assertions.assertEquals(propertyDataType, label?.propertiesList?.firstOrNull()?.dataType)
+        assertEquals(1, label?.propertiesCount)
+        assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
+        assertEquals(propertyDataType, label?.propertiesList?.firstOrNull()?.dataType)
     }
 
     @Test
@@ -181,8 +185,8 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabel = managementServer.getEdgeLabelsByName(graph.openManagement(), "test2").firstOrNull()
 
-        Assertions.assertEquals("test2", edgeLabel?.name)
-        Assertions.assertEquals(ensureEdgeLabel?.id, edgeLabel?.id)
+        assertEquals("test2", edgeLabel?.name)
+        assertEquals(ensureEdgeLabel?.id, edgeLabel?.id)
     }
 
     @Test
@@ -191,7 +195,7 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabel = managementServer.getEdgeLabelsByName(graph.openManagement(), "test").firstOrNull()
 
-        Assertions.assertNull(edgeLabel)
+        assertNull(edgeLabel)
     }
 
     @Test
@@ -202,7 +206,7 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabel = managementServer.getEdgeLabelsByName(graph.openManagement(), label).firstOrNull()
 
-        Assertions.assertEquals(label, edgeLabel?.name)
+        assertEquals(label, edgeLabel?.name)
     }
 
     @ParameterizedTest
@@ -218,12 +222,12 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabel = managementServer.getEdgeLabelsByName(graph.openManagement(), "edgeName").firstOrNull()
 
-        Assertions.assertEquals(1, edgeLabel?.propertiesCount)
-        Assertions.assertEquals(
+        assertEquals(1, edgeLabel?.propertiesCount)
+        assertEquals(
             propertyName,
             edgeLabel?.propertiesList?.firstOrNull()?.name
         )
-        Assertions.assertEquals(
+        assertEquals(
             propertyDataType,
             edgeLabel?.propertiesList?.firstOrNull()?.dataType
         )
@@ -242,9 +246,9 @@ class ManagementForEdgeLabelsTests {
 
         val label = managementServer.getEdgeLabelsByName(graph.openManagement(), "edgeName").firstOrNull()
 
-        Assertions.assertEquals(1, label?.propertiesCount)
-        Assertions.assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
-        Assertions.assertEquals(PropertyDataType.Int32, label?.propertiesList?.firstOrNull()?.dataType)
+        assertEquals(1, label?.propertiesCount)
+        assertEquals(propertyName, label?.propertiesList?.firstOrNull()?.name)
+        assertEquals(PropertyDataType.Int32, label?.propertiesList?.firstOrNull()?.dataType)
     }
 
     @ParameterizedTest
@@ -257,7 +261,7 @@ class ManagementForEdgeLabelsTests {
 
         val label = managementServer.getEdgeLabelsByName(graph.openManagement(), "edgeName").firstOrNull()
 
-        Assertions.assertEquals(numberOfProperties, label?.propertiesCount)
+        assertEquals(numberOfProperties, label?.propertiesCount)
     }
 
     @Test
@@ -268,7 +272,7 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabels = managementServer.getEdgeLabels(graph.openManagement())
 
-        Assertions.assertEquals(2, edgeLabels.size)
+        assertEquals(2, edgeLabels.size)
     }
 
     @Test
@@ -279,8 +283,8 @@ class ManagementForEdgeLabelsTests {
 
         val edgeLabels = managementServer.getEdgeLabels(graph.openManagement())
 
-        Assertions.assertNotNull(edgeLabels.firstOrNull { it.name == "edgeName1" })
-        Assertions.assertNotNull(edgeLabels.firstOrNull { it.name == "edgeName2" })
+        assertNotNull(edgeLabels.firstOrNull { it.name == "edgeName1" })
+        assertNotNull(edgeLabels.firstOrNull { it.name == "edgeName2" })
     }
 
     @ParameterizedTest
@@ -293,7 +297,7 @@ class ManagementForEdgeLabelsTests {
 
         val label = managementServer.getEdgeLabels(graph.openManagement()).firstOrNull()
 
-        Assertions.assertEquals(numberOfProperties, label?.propertiesCount)
+        assertEquals(numberOfProperties, label?.propertiesCount)
     }
 
     private fun buildCompositeIndex(
@@ -317,11 +321,13 @@ class ManagementForEdgeLabelsTests {
         val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
         val index = buildCompositeIndex("test", properties = listOf(label.propertiesList!!.first()))
 
-        val compositeIndex = managementServer.ensureCompositeIndexByEdgeLabel(graph.openManagement(), label, index)
+        val compositeIndex = managementServer.ensureCompositeIndexByEdgeLabel(graph.openManagement(), label, index)!!
 
-        Assertions.assertEquals("test", compositeIndex?.name)
-        Assertions.assertEquals(1, compositeIndex?.propertiesCount)
-        Assertions.assertNotNull(compositeIndex?.id)
+        assertNotNull(compositeIndex.id)
+        assertEquals("test", compositeIndex.name)
+        assertEquals(1, compositeIndex.propertiesCount)
+        assertNotNull(compositeIndex.propertiesList.first().id)
+        assertEquals("propertyName", compositeIndex.propertiesList.first().name)
     }
 
     @Test
@@ -336,9 +342,9 @@ class ManagementForEdgeLabelsTests {
 
         val compositeIndex = managementServer.ensureCompositeIndexByEdgeLabel(graph.openManagement(), label, index)!!
 
-        Assertions.assertEquals(2, compositeIndex.propertiesCount)
-        Assertions.assertTrue(compositeIndex.propertiesList.any { it.name == property1.name })
-        Assertions.assertTrue(compositeIndex.propertiesList.any { it.name == property2.name })
+        assertEquals(2, compositeIndex.propertiesCount)
+        assertTrue(compositeIndex.propertiesList.any { it.name == property1.name })
+        assertTrue(compositeIndex.propertiesList.any { it.name == property2.name })
     }
 
     @Test
@@ -349,7 +355,7 @@ class ManagementForEdgeLabelsTests {
 
         val compositeIndex = managementServer.getCompositeIndicesByEdgeLabel(graph, label).firstOrNull()
 
-        Assertions.assertNull(compositeIndex)
+        assertNull(compositeIndex)
     }
 
     @Test
@@ -362,9 +368,125 @@ class ManagementForEdgeLabelsTests {
 
         val compositeIndex = managementServer.getCompositeIndicesByEdgeLabel(graph, label).first()
 
-        Assertions.assertEquals("test", compositeIndex.name)
-        Assertions.assertEquals(1, compositeIndex.propertiesCount)
-        Assertions.assertNotNull(compositeIndex.id)
+        assertNotNull(compositeIndex.id)
+        assertEquals("test", compositeIndex.name)
+        assertEquals(1, compositeIndex.propertiesCount)
+        assertNotNull(compositeIndex.propertiesList.first().id)
+        assertEquals("propertyName", compositeIndex.propertiesList.first().name)
     }
 
+    @Test
+    fun `getCompositeIndicesByEdgeLabel create index with two properties`() {
+        val (managementServer, graph) = createDefaults()
+        val property1 = buildProperty("property1", dataType = PropertyDataType.String)
+        val property2 = buildProperty("property2", dataType = PropertyDataType.String)
+        val property3 = buildProperty("property3", dataType = PropertyDataType.String)
+        val label =
+            buildLabel(properties = listOf(property1, property2, property3), managementServer = managementServer, graph = graph)
+        val index = buildCompositeIndex("test", properties = listOf(property1, property2))
+        managementServer.ensureCompositeIndexByEdgeLabel(graph.openManagement(), label, index)!!
+
+        val compositeIndex = managementServer.getCompositeIndicesByEdgeLabel(graph, label).first()
+
+        assertEquals(2, compositeIndex.propertiesCount)
+        assertTrue(compositeIndex.propertiesList.any { it.name == property1.name })
+        assertTrue(compositeIndex.propertiesList.any { it.name == property2.name })
+    }
+
+    private fun buildMixedIndex(
+        name: String = "byMixedIndex",
+        id: Long? = null,
+        backend: String = "index",
+        properties: List<EdgeProperty> = emptyList()
+    ): MixedEdgeIndex {
+        val builder = MixedEdgeIndex.newBuilder()
+            .setName(name)
+            .addAllProperties(properties)
+            .setBackend(backend)
+        if (id != null) {
+            builder.id = Int64Value.of(id)
+        }
+        return builder.build()
+    }
+
+    @Test
+    fun `ensureMixedIndexByEdgeLabel create basic index`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+        val index = buildMixedIndex("test", backend = "index", properties = listOf(label.propertiesList!!.first()))
+
+        val mixedIndex = managementServer.ensureMixedIndexByEdgeLabel(graph.openManagement(), label, index)!!
+
+        assertNotNull(mixedIndex.id)
+        assertEquals("test", mixedIndex.name)
+        assertEquals("index", mixedIndex.backend)
+        assertEquals(1, mixedIndex.propertiesCount)
+        assertNotNull(mixedIndex.propertiesList.first().id)
+        assertEquals("propertyName", mixedIndex.propertiesList.first().name)
+    }
+
+    @Test
+    fun `ensureMixedIndexByEdgeLabel create index with two properties`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property1 = buildProperty("property1", dataType = PropertyDataType.String)
+        val property2 = buildProperty("property2", dataType = PropertyDataType.String)
+        val property3 = buildProperty("property3", dataType = PropertyDataType.String)
+        val label =
+            buildLabel(properties = listOf(property1, property2, property3), managementServer = managementServer, graph = graph)
+        val index = buildMixedIndex("test", properties = listOf(property1, property2))
+
+        val mixedIndex = managementServer.ensureMixedIndexByEdgeLabel(graph.openManagement(), label, index)!!
+
+        assertEquals(2, mixedIndex.propertiesCount)
+        assertTrue(mixedIndex.propertiesList.any { it.name == property1.name })
+        assertTrue(mixedIndex.propertiesList.any { it.name == property2.name })
+    }
+
+    @Test
+    fun `getMixedIndicesByVertexLabel get no index`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+
+        val mixedIndex = managementServer.getMixedIndicesByEdgeLabel(graph, label).firstOrNull()
+
+        assertNull(mixedIndex)
+    }
+
+    @Test
+    fun `getMixedIndicesByVertexLabel basic index`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+        val index = buildMixedIndex("test", backend = "index", properties = listOf(label.propertiesList!!.first()))
+        managementServer.ensureMixedIndexByEdgeLabel(graph.openManagement(), label, index)
+
+        val mixedIndex = managementServer.getMixedIndicesByEdgeLabel(graph, label).first()
+
+        assertNotNull(mixedIndex.id)
+        assertEquals("test", mixedIndex.name)
+        assertEquals("index", mixedIndex.backend)
+        assertEquals(1, mixedIndex.propertiesCount)
+        assertNotNull(mixedIndex.propertiesList.first().id)
+        assertEquals("propertyName", mixedIndex.propertiesList.first().name)
+    }
+
+    @Test
+    fun `getMixedIndicesByVertexLabel create index with two properties`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property1 = buildProperty("property1", dataType = PropertyDataType.String)
+        val property2 = buildProperty("property2", dataType = PropertyDataType.String)
+        val property3 = buildProperty("property3", dataType = PropertyDataType.String)
+        val label =
+            buildLabel(properties = listOf(property1, property2, property3), managementServer = managementServer, graph = graph)
+        val index = buildMixedIndex("test", properties = listOf(property1, property2))
+        managementServer.ensureMixedIndexByEdgeLabel(graph.openManagement(), label, index)!!
+
+        val mixedIndex = managementServer.getMixedIndicesByEdgeLabel(graph, label).first()
+
+        assertEquals(2, mixedIndex.propertiesCount)
+        assertTrue(mixedIndex.propertiesList.any { it.name == property1.name })
+        assertTrue(mixedIndex.propertiesList.any { it.name == property2.name })
+    }
 }
