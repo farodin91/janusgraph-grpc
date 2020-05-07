@@ -41,6 +41,7 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
             management.vertexLabels.first { it.longId() == label.id.value }
                 ?: throw IllegalArgumentException("No vertexLabel found with id")
         } else {
+            print("I'm retrieving vertex label with name " + label.name)
             management.getVertexLabel(label.name)
         }
 

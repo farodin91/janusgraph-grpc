@@ -27,4 +27,4 @@ globals << [hook : [
 ] as LifeCycleHook]
 
 // define the default TraversalSource to bind queries to - this one will be named "g".
-globals << [g_in : graph_in.traversal(), g_bdb : graph_bdb.traversal()]
+globals << [g_in : graph_inmemory.traversal(), g_bdb : graph_berkleydb.traversal()]
