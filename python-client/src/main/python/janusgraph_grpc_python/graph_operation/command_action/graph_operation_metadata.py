@@ -37,7 +37,7 @@ class GraphOperationMetadata:
                                      else x.split("=")[1].strip().split(",")[0]
                                  for x in metadata}
 
-                self.ADDER = GraphElementAdder().set(**self.METADATA)
+                self.ADDER = GraphElementAdder(**self.METADATA)
 
         print(f"Metadata is after parsing: {self.METADATA}")
 

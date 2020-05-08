@@ -71,8 +71,8 @@
         * [ ] multiple properties
         * [ ] multiple indices
         * [ ] status
-* [ ] Ensure Vertices (create)
-    * [ ] name
+* [x] Ensure Vertices (create)
+    * [x] name
     * [ ] readonly -> static
     * [ ] partitioned
     * [ ] edges

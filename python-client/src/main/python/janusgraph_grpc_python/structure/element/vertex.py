@@ -1,6 +1,7 @@
 from .graph_element import GraphElement
 from management import management_pb2
 from graph_operation.graph_indexer import GraphIndexer
+from graph_operation.graph_adder import GraphElementAdder
 
 GRAPH_NAME = "graph_berkleydb"
 
@@ -76,6 +77,7 @@ class Vertex(GraphElement):
         self.__generate_request__()
         if self.OPTIONAL_METADATA is None:
             return self.service.EnsureVertexLabel(self.REQUEST)
+
         else:
             self.OPTIONAL_OPERATOR.set_context(self.CONTEXT)
 
@@ -87,6 +89,14 @@ class Vertex(GraphElement):
                     indexer = self.OPTIONAL_OPERATOR.get_indexer()
 
                     return indexer.put_index()
+            elif isinstance(self.OPTIONAL_OPERATOR, GraphElementAdder):
+                self.ELEMENT = self.OPTIONAL_OPERATOR.get_element()
+                self.__generate_request__()
+
+                print("Not yet implemented PUT method for GraphAdder instance in VertexLabel. "
+                      "--TODO--[Case when Vertex is added without defaults]")
+
+                return self.service.EnsureVertexLabel(self.REQUEST)
+
             else:
-                raise NotImplementedError("Not yet implemented PUT method for GraphAdder instance in VertexLabel. "
-                                          "--TODO--")
+                raise ValueError("Invalid graph operator got. Expecting either of GraphIndexer of GraphElementAdder")

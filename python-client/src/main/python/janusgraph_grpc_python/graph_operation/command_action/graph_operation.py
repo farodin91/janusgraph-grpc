@@ -1,5 +1,6 @@
 from management import management_pb2_grpc
 from structure.element.graph_element import GraphElement
+from graph_operation.graph_indexer import GraphIndexer
 
 
 class GraphOperation:
@@ -57,7 +58,9 @@ class GraphOperation:
             operator = self.metadata.get_operator()
 
             operator.set_element(self.processor.get_element())
-            operator.set_service(self.SERVICE)
+
+            if isinstance(operator, GraphIndexer):
+                operator.set_service(self.SERVICE)
 
             self.processor.set_optional_operator(operator)
 

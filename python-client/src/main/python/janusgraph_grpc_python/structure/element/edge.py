@@ -1,6 +1,7 @@
 from .graph_element import GraphElement
 from management import management_pb2
 from graph_operation.graph_indexer import GraphIndexer
+from graph_operation.graph_adder import GraphElementAdder
 
 GRAPH_NAME = "graph_berkleydb"
 
@@ -39,7 +40,7 @@ class Edge(GraphElement):
                 self.REQUEST = management_pb2.GetEdgeLabelsByNameRequest(context=self.CONTEXT, name=self.element_label)
         else:
             if self.element_label is not "ALL":
-                self.REQUEST = management_pb2.EnsureEdgeLabelRequest(context=self.CONTEXT, label=self.ELEMENT)
+                self.REQUEST = management_pb2.EnsureEdgeLabelRequest(context=self.CONTEXT, label=self.element_label)
             else:
                 raise NotImplementedError("Implemented PUT operation on VertexLabel when "
                                           "a vertexLabel name is provided not when ALL")
@@ -86,6 +87,15 @@ class Edge(GraphElement):
                     indexer = self.OPTIONAL_OPERATOR.get_indexer()
 
                     return indexer.put_index()
+
+            elif isinstance(self.OPTIONAL_OPERATOR, GraphElementAdder):
+                self.ELEMENT = self.OPTIONAL_OPERATOR.get_element()
+                self.__generate_request__()
+
+                print("Not yet implemented PUT method for GraphAdder instance in EdgeLabel. "
+                      "--TODO--[Case when Vertex is added without defaults]")
+
+                return self.service.EnsureEdgeLabel(self.REQUEST)
+
             else:
-                raise NotImplementedError("Not yet implemented PUT method for GraphAdder instance in EdgeLabel. "
-                                          "--TODO--")
+                raise ValueError("Invalid graph operator got. Expecting either of GraphIndexer of GraphElementAdder")
