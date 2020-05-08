@@ -1,5 +1,5 @@
-from ...graph_operation.graph_indexer import GraphIndexer
-from ...management import management_pb2
+from graph_operation.graph_indexer import GraphIndexer
+from management import management_pb2
 
 
 class CompositeIndex(GraphIndexer):

@@ -1,9 +1,7 @@
 from operator import itemgetter
 from collections.abc import Iterable
 
-from ..management import management_pb2
-from ..structure.index.composite_index import CompositeIndex
-from ..structure.index.mixed_index import MixedIndex
+from management import management_pb2
 
 
 class GraphIndexer:
@@ -69,6 +67,9 @@ class GraphIndexer:
         # print(self.ELEMENT.name)
         # print({k: self.__dict__.get(k) for k in self.supported_parameters})
         # print("========= I'm inside get_indexer() ==========")
+
+        from structure.index.composite_index import CompositeIndex
+        from structure.index.mixed_index import MixedIndex
 
         if self.element_to_index is None:
             raise ValueError("Please call set_element() to identify the element to be Indexed before calling get_indexer()")

@@ -1,7 +1,7 @@
 import argparse
 from .graph_operation import GraphOperation
 from .graph_operation_metadata import GraphOperationMetadata
-from ...type_class.graph_element_type import GraphElementType
+from type_class.graph_element_type import GraphElementType
 
 
 class GraphOperationAction(argparse.Action):

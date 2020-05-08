@@ -1,6 +1,7 @@
 from .graph_element import GraphElement
-from ...management import management_pb2
-from ...client.management_client import GRAPH_NAME
+from management import management_pb2
+
+GRAPH_NAME = "graph_berkleydb"
 
 
 class Contexts(GraphElement):

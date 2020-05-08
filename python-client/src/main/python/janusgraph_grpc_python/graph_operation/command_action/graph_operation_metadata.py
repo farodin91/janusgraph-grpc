@@ -1,5 +1,5 @@
-from ..graph_indexer import GraphIndexer
-from ..graph_adder import GraphElementAdder
+from graph_operation.graph_indexer import GraphIndexer
+from graph_operation.graph_adder import GraphElementAdder
 
 
 class GraphOperationMetadata:

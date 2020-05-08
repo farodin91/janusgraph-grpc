@@ -1,6 +1,6 @@
-from ..structure.element.edge import Edge
-from ..structure.element.vertex import Vertex
-from ..structure.element.context_action import Contexts
+from structure.element.edge import Edge
+from structure.element.vertex import Vertex
+from structure.element.context_action import Contexts
 
 
 class GraphElementType:
