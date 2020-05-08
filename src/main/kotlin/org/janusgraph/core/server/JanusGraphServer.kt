@@ -10,8 +10,8 @@ import org.slf4j.LoggerFactory
 import java.util.function.Function
 
 class JanusGraphServer(settings: JanusGraphSettings) {
-    val gremlinServer : GremlinServer = GremlinServer(settings)
-    var grpcServer: Server? = null
+    private val gremlinServer : GremlinServer = GremlinServer(settings)
+    private var grpcServer: Server? = null
 
     companion object {
         val logger: Logger = LoggerFactory.getLogger(JanusGraphServer::class.java)

@@ -2,21 +2,21 @@ package org.janusgraph.grpc.server
 
 import com.google.protobuf.Int64Value
 import org.janusgraph.core.JanusGraph
-import org.janusgraph.grpc.CompositeVertexIndex
-import org.janusgraph.grpc.PropertyDataType
-import org.janusgraph.grpc.VertexLabel
-import org.janusgraph.grpc.VertexProperty
+import org.janusgraph.grpc.*
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Path
 
 
 class ManagementForVertexLabelsTests {
 
-    private fun createDefaults() =
-        ManagementForVertexLabels() to JanusGraphTestUtils.getJanusGraph()
+
+    private fun createDefaults(tempDir: Path? = null) =
+        ManagementForVertexLabels() to JanusGraphTestUtils.getJanusGraph(tempDir)
 
     private fun buildLabel(
         name: String = "test",
@@ -407,11 +407,13 @@ class ManagementForVertexLabelsTests {
     private fun buildCompositeIndex(
         name: String = "byCompositeIndex",
         id: Long? = null,
+        unique: Boolean = false,
         properties: List<VertexProperty> = emptyList()
     ): CompositeVertexIndex {
         val builder = CompositeVertexIndex.newBuilder()
             .setName(name)
             .addAllProperties(properties)
+            .setUnique(unique)
         if (id != null) {
             builder.id = Int64Value.of(id)
         }
@@ -425,11 +427,26 @@ class ManagementForVertexLabelsTests {
         val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
         val index = buildCompositeIndex("test", properties = listOf(label.propertiesList!!.first()))
 
-        val compositeIndex = managementServer.ensureCompositeIndexByVertexLabel(graph.openManagement(), label, index)
+        val compositeIndex = managementServer.ensureCompositeIndexByVertexLabel(graph.openManagement(), label, index)!!
 
-        assertEquals("test", compositeIndex?.name)
-        assertEquals(1, compositeIndex?.propertiesCount)
-        assertNotNull(compositeIndex?.id)
+        assertNotNull(compositeIndex.id)
+        assertEquals("test", compositeIndex.name)
+        assertEquals(1, compositeIndex.propertiesCount)
+        assertNotNull(compositeIndex.propertiesList.first().id)
+        assertEquals("propertyName", compositeIndex.propertiesList.first().name)
+        assertFalse(compositeIndex.unique)
+    }
+
+    @Test
+    fun `ensureCompositeIndexByVertexLabel create unique index`() {
+        val (managementServer, graph) = createDefaults()
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+        val index = buildCompositeIndex("test", unique = true, properties = listOf(label.propertiesList!!.first()))
+
+        val compositeIndex = managementServer.ensureCompositeIndexByVertexLabel(graph.openManagement(), label, index)!!
+
+        assertTrue(compositeIndex.unique)
     }
 
     @Test
@@ -470,8 +487,140 @@ class ManagementForVertexLabelsTests {
 
         val compositeIndex = managementServer.getCompositeIndicesByVertexLabel(graph, label).first()
 
+        assertNotNull(compositeIndex.id)
         assertEquals("test", compositeIndex.name)
         assertEquals(1, compositeIndex.propertiesCount)
-        assertNotNull(compositeIndex.id)
+        assertNotNull(compositeIndex.propertiesList.first().id)
+        assertEquals("propertyName", compositeIndex.propertiesList.first().name)
+        assertFalse(compositeIndex.unique)
+    }
+
+    @Test
+    fun `getCompositeIndicesByVertexLabel create unique index`() {
+        val (managementServer, graph) = createDefaults()
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+        val index = buildCompositeIndex("test", unique = true, properties = listOf(label.propertiesList!!.first()))
+
+        managementServer.ensureCompositeIndexByVertexLabel(graph.openManagement(), label, index)
+
+        val compositeIndex = managementServer.getCompositeIndicesByVertexLabel(graph, label).first()
+
+        assertTrue(compositeIndex.unique)
+    }
+
+    @Test
+    fun `getCompositeIndicesByVertexLabel create index with two properties`() {
+        val (managementServer, graph) = createDefaults()
+        val property1 = buildProperty("property1", dataType = PropertyDataType.String)
+        val property2 = buildProperty("property2", dataType = PropertyDataType.String)
+        val property3 = buildProperty("property3", dataType = PropertyDataType.String)
+        val label =
+            buildLabel(properties = listOf(property1, property2, property3), managementServer = managementServer, graph = graph)
+        val index = buildCompositeIndex("test", properties = listOf(property1, property2))
+        managementServer.ensureCompositeIndexByVertexLabel(graph.openManagement(), label, index)!!
+
+        val compositeIndex = managementServer.getCompositeIndicesByVertexLabel(graph, label).first()
+
+        assertEquals(2, compositeIndex.propertiesCount)
+        assertTrue(compositeIndex.propertiesList.any { it.name == property1.name })
+        assertTrue(compositeIndex.propertiesList.any { it.name == property2.name })
+    }
+
+    private fun buildMixedIndex(
+        name: String = "byMixedIndex",
+        id: Long? = null,
+        backend: String = "index",
+        properties: List<VertexProperty> = emptyList()
+    ): MixedVertexIndex {
+        val builder = MixedVertexIndex.newBuilder()
+            .setName(name)
+            .addAllProperties(properties)
+            .setBackend(backend)
+        if (id != null) {
+            builder.id = Int64Value.of(id)
+        }
+        return builder.build()
+    }
+
+    @Test
+    fun `ensureMixedIndexByVertexLabel create basic index`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+        val index = buildMixedIndex("test", backend = "index", properties = listOf(label.propertiesList!!.first()))
+
+        val mixedIndex = managementServer.ensureMixedIndexByVertexLabel(graph.openManagement(), label, index)!!
+
+        assertNotNull(mixedIndex.id)
+        assertEquals("test", mixedIndex.name)
+        assertEquals("index", mixedIndex.backend)
+        assertEquals(1, mixedIndex.propertiesCount)
+        assertNotNull(mixedIndex.propertiesList.first().id)
+        assertEquals("propertyName", mixedIndex.propertiesList.first().name)
+    }
+
+    @Test
+    fun `ensureMixedIndexByVertexLabel create index with two properties`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property1 = buildProperty("property1", dataType = PropertyDataType.String)
+        val property2 = buildProperty("property2", dataType = PropertyDataType.String)
+        val property3 = buildProperty("property3", dataType = PropertyDataType.String)
+        val label =
+            buildLabel(properties = listOf(property1, property2, property3), managementServer = managementServer, graph = graph)
+        val index = buildMixedIndex("test", properties = listOf(property1, property2))
+
+        val mixedIndex = managementServer.ensureMixedIndexByVertexLabel(graph.openManagement(), label, index)!!
+
+        assertEquals(2, mixedIndex.propertiesCount)
+        assertTrue(mixedIndex.propertiesList.any { it.name == property1.name })
+        assertTrue(mixedIndex.propertiesList.any { it.name == property2.name })
+    }
+
+    @Test
+    fun `getMixedIndicesByVertexLabel get no index`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+
+        val mixedIndex = managementServer.getMixedIndicesByVertexLabel(graph, label).firstOrNull()
+
+        assertNull(mixedIndex)
+    }
+
+    @Test
+    fun `getMixedIndicesByVertexLabel basic index`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property = buildProperty(dataType = PropertyDataType.String)
+        val label = buildLabel(properties = listOf(property), managementServer = managementServer, graph = graph)
+        val index = buildMixedIndex("test", backend = "index", properties = listOf(label.propertiesList!!.first()))
+        managementServer.ensureMixedIndexByVertexLabel(graph.openManagement(), label, index)
+
+        val mixedIndex = managementServer.getMixedIndicesByVertexLabel(graph, label).first()
+
+        assertNotNull(mixedIndex.id)
+        assertEquals("test", mixedIndex.name)
+        assertEquals("index", mixedIndex.backend)
+        assertEquals(1, mixedIndex.propertiesCount)
+        assertNotNull(mixedIndex.propertiesList.first().id)
+        assertEquals("propertyName", mixedIndex.propertiesList.first().name)
+    }
+
+    @Test
+    fun `getMixedIndicesByVertexLabel create index with two properties`(@TempDir tempDir: Path) {
+        val (managementServer, graph) = createDefaults(tempDir)
+        val property1 = buildProperty("property1", dataType = PropertyDataType.String)
+        val property2 = buildProperty("property2", dataType = PropertyDataType.String)
+        val property3 = buildProperty("property3", dataType = PropertyDataType.String)
+        val label =
+            buildLabel(properties = listOf(property1, property2, property3), managementServer = managementServer, graph = graph)
+        val index = buildMixedIndex("test", properties = listOf(property1, property2))
+        managementServer.ensureMixedIndexByVertexLabel(graph.openManagement(), label, index)!!
+
+        val mixedIndex = managementServer.getMixedIndicesByVertexLabel(graph, label).first()
+
+        assertEquals(2, mixedIndex.propertiesCount)
+        assertTrue(mixedIndex.propertiesList.any { it.name == property1.name })
+        assertTrue(mixedIndex.propertiesList.any { it.name == property2.name })
     }
 }

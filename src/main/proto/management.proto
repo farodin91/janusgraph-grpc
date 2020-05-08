@@ -141,7 +141,6 @@ message MixedVertexIndex {
     google.protobuf.Int64Value id = 1;
     string name = 2;
     repeated VertexProperty properties = 3;
-    bool unique = 4;
     string backend = 5;
 }
 
@@ -161,7 +160,6 @@ message CompositeEdgeIndex {
     google.protobuf.Int64Value id = 1;
     string name = 2;
     repeated EdgeProperty properties = 3;
-    bool unique = 4;
 }
 
 message GetCompositeIndicesByEdgeLabelRequest {
@@ -179,7 +177,6 @@ message MixedEdgeIndex {
     google.protobuf.Int64Value id = 1;
     string name = 2;
     repeated EdgeProperty properties = 3;
-    bool unique = 4;
     string backend = 5;
 }
 
