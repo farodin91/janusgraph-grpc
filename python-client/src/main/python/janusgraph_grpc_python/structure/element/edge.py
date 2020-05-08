@@ -1,4 +1,7 @@
 from .graph_element import GraphElement
+from ...management import management_pb2
+from ...graph_operation.graph_indexer import GraphIndexer
+from ...client.management_client import GRAPH_NAME
 
 
 class Edge(GraphElement):

@@ -1,3 +1,5 @@
+from ...management import management_pb2_grpc
+from ...structure.element.graph_element import GraphElement
 
 
 class GraphOperation:

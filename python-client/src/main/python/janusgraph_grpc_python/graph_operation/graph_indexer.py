@@ -1,3 +1,10 @@
+from operator import itemgetter
+from collections.abc import Iterable
+
+from ..management import management_pb2
+from ..structure.index.composite_index import CompositeIndex
+from ..structure.index.mixed_index import MixedIndex
+
 
 class GraphIndexer:
     supported_parameters = ["index_type", "index_name", "index_on", "index_only", "unique_index"]
