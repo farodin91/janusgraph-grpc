@@ -11,6 +11,8 @@ interface IManagementForEdgeLabels {
     fun ensureCompositeIndexByEdgeLabel(management: JanusGraphManagement, requestLabel: EdgeLabel, requestIndex: CompositeEdgeIndex): CompositeEdgeIndex?
     fun getCompositeIndicesByEdgeLabel(graph: StandardJanusGraph, requestLabel: EdgeLabel): List<CompositeEdgeIndex>
 
+    fun getCompositeIndicesForEdge(graph: StandardJanusGraph): List<CompositeEdgeIndex>
+
     fun ensureMixedIndexByEdgeLabel(management: JanusGraphManagement, requestLabel: EdgeLabel, requestIndex: MixedEdgeIndex): MixedEdgeIndex?
     fun getMixedIndicesByEdgeLabel(graph: StandardJanusGraph, requestLabel: EdgeLabel): List<MixedEdgeIndex>
 }

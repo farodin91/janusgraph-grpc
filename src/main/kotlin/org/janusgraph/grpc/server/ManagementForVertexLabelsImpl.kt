@@ -92,4 +92,18 @@ class ManagementForVertexLabelsImpl(
         indices.forEach { responseObserver?.onNext(it) }
         responseObserver?.onCompleted()
     }
+
+    override fun getCompositeIndicesForVertex(
+        request: GetCompositeIndicesForVertexRequest,
+        responseObserver: StreamObserver<CompositeVertexIndex>?
+    ) {
+        val graph = contextManager.getGraph(request?.context)
+        if (graph == null) {
+            responseObserver?.onError(Throwable("Incorrect context"))
+            return
+        }
+        val indices = managementServer.getCompositeIndicesForVertex(graph)
+        indices.forEach { responseObserver?.onNext(it) }
+        responseObserver?.onCompleted()
+    }
 }

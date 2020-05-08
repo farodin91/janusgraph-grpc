@@ -131,6 +131,23 @@ class ManagementForEdgeLabels : IManagementForEdgeLabels {
         return indices
     }
 
+    override fun getCompositeIndicesForEdge(
+        graph: StandardJanusGraph
+    ): List<CompositeEdgeIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val graphIndexes = getGraphIndices(tx, Edge::class.java)
+        val indices = graphIndexes
+            .filterIsInstance<CompositeIndexType>()
+            .map {
+                CompositeEdgeIndex.newBuilder()
+                    .setName(it.name)
+                    .addAllProperties(it.fieldKeys.map { property -> createEdgePropertyProto(property.fieldKey) })
+                    .build()
+            }
+        tx.rollback()
+        return indices
+    }
+
     override fun ensureMixedIndexByEdgeLabel(
         management: JanusGraphManagement,
         requestLabel: EdgeLabel,

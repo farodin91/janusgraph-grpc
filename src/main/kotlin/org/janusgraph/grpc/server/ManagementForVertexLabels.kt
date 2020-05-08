@@ -150,6 +150,24 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
         return indices
     }
 
+    override fun getCompositeIndicesForVertex(
+        graph: StandardJanusGraph
+    ): List<CompositeVertexIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val graphIndexes = getGraphIndices(tx, Vertex::class.java)
+        val indices = graphIndexes
+            .filterIsInstance<CompositeIndexType>()
+            .map {
+                CompositeVertexIndex.newBuilder()
+                    .setName(it.name)
+                    .addAllProperties(it.fieldKeys.map { property -> createVertexPropertyProto(property.fieldKey) })
+                    .setUnique(it.cardinality == Cardinality.SINGLE)
+                    .build()
+            }
+        tx.rollback()
+        return indices
+    }
+
     override fun ensureMixedIndexByVertexLabel(
         management: JanusGraphManagement,
         requestLabel: VertexLabel,
