@@ -772,6 +772,7 @@ def switcher(element, data):
 
 if __name__ == '__main__':
     # Input format
+    # python -m grpc_tools.protoc -I src/main/proto/ --python_out=src/main/python/janusgraph_grpc_python/management/ --grpc_python_out=src/main/python/janusgraph_grpc_python/management/ src/main/proto/management.proto
     # python sample_client.py --host localhost --port 10182 --op GET --arg ContextAction
     # python sample_client.py --host localhost --port 10182 --op GET --arg VertexLabel ALL
     # python sample_client.py --host localhost --port 10182 --op GET --arg VertexLabel 'name'
