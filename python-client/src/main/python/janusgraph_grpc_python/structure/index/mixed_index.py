@@ -1,4 +1,4 @@
-from ...graph_operation.graph_indexer import GraphIndexer
+from graph_operation.graph_indexer import GraphIndexer
 
 
 class MixedIndex(GraphIndexer):

@@ -33,25 +33,32 @@ class CompositeIndex(GraphIndexer):
 
     def __generate_vertex_properties__(self):
         vertex_properties = []
-        for elem in self.index_on:
-            vertex_properties.append(management_pb2.VertexProperty(name=elem))
+        if isinstance(self.index_on, str):
+            vertex_properties.append(management_pb2.VertexProperty(name=self.index_on))
+        else:
+            for elem in self.index_on:
+                vertex_properties.append(management_pb2.VertexProperty(name=elem))
         return vertex_properties
 
     def __generate_edge_properties__(self):
         edge_properties = []
-        for elem in self.index_on:
-            edge_properties.append(management_pb2.EdgeProperty(name=elem))
+        if isinstance(self.index_on, str):
+            edge_properties.append(management_pb2.EdgeProperty(name=self.index_on))
+        else:
+            for elem in self.index_on:
+                edge_properties.append(management_pb2.EdgeProperty(name=elem))
         return edge_properties
 
     def create_put_index_request(self):
         if str(self.element_to_index) == "VertexLabel":
             vp = self.__generate_vertex_properties__()
+            print(self.index_name, " === " , vp, " === " , self.unique_index)
             index = management_pb2.CompositeVertexIndex(name=self.index_name, properties=vp, unique=self.unique_index)
             self.REQUEST = management_pb2.EnsureCompositeIndexByVertexLabelRequest(context=self.CONTEXT, vertexLabel=self.ELEMENT, index=index)
 
         elif str(self.element_to_index) == "EdgeLabel":
             ep = self.__generate_edge_properties__()
-            index = management_pb2.CompositeEdgeIndex(name=self.index_name, properties=ep, unique=self.unique_index)
+            index = management_pb2.CompositeEdgeIndex(name=self.index_name, properties=ep)
             self.REQUEST = management_pb2.EnsureCompositeIndexByEdgeLabelRequest(context=self.CONTEXT, edgeLabel=self.ELEMENT, index=index)
 
         else:
