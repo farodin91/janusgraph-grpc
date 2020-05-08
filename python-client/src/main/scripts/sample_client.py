@@ -24,7 +24,7 @@ class GraphIndexer:
     SERVICE = None
     ELEMENT = None
 
-    GET_OPERATION_PARAMS = ["index_name", "index_type"]
+    GET_OPERATION_PARAMS = ["index_type"]
 
     def __init__(self, **kwargs):
         # Defaults for an Index
@@ -114,7 +114,10 @@ class GraphIndexer:
     def put_index(self):
         raise NotImplementedError(f"{str(self)} is not subclassed by any other class yet so no put_index() implemented")
 
-    def get_index(self):
+    def get_indices_by_label(self):
+        raise NotImplementedError(f"{str(self)} is not subclassed by any other class yet so no get_index() implemented")
+
+    def get_all_indices(self):
         raise NotImplementedError(f"{str(self)} is not subclassed by any other class yet so no get_index() implemented")
 
     def __are_valid_parameters_passed__(self, **kwargs):
@@ -160,11 +163,21 @@ class CompositeIndex(GraphIndexer):
     def __str__(self):
         return "CompositeIndex"
 
-    def create_get_index_request(self):
+    def create_get_indices_by_name_request(self):
         if str(self.element_to_index) == "VertexLabel":
             self.REQUEST = management_pb2.GetCompositeIndicesByVertexLabelRequest(context=self.CONTEXT, vertexLabel=self.ELEMENT)
         elif str(self.element_to_index) == "EdgeLabel":
             self.REQUEST = management_pb2.GetCompositeIndicesByEdgeLabelRequest(context=self.CONTEXT, edgeLabel=self.ELEMENT)
+        else:
+            raise ValueError(f"Invalid element_to_index parameter. "
+                             f"Expecting VertexLabel/EdgeLabel for {str(self.element_to_index)}")
+        return self
+
+    def create_get_all_indices_request(self):
+        if str(self.element_to_index) == "VertexLabel":
+            self.REQUEST = management_pb2.GetCompositeIndicesForVertexRequest(context=self.CONTEXT)
+        elif str(self.element_to_index) == "EdgeLabel":
+            self.REQUEST = management_pb2.GetCompositeIndicesForEdgeRequest(context=self.CONTEXT)
         else:
             raise ValueError(f"Invalid element_to_index parameter. "
                              f"Expecting VertexLabel/EdgeLabel for {str(self.element_to_index)}")
@@ -211,15 +224,28 @@ class CompositeIndex(GraphIndexer):
             raise ValueError(f"Invalid element_to_index parameter. "
                              f"Expecting VertexLabel/EdgeLabel for {self.element_to_index}")
 
-    def get_index(self):
+    def get_indices_by_label(self):
         self.__are_required_parameters_set__(self.GET_OPERATION_PARAMS)
 
-        self.create_get_index_request()
+        self.create_get_indices_by_name_request()
 
         if self.element_to_index == "VertexLabel":
             return self.SERVICE.GetCompositeIndicesByVertexLabel(self.REQUEST)
         elif self.element_to_index == "EdgeLabel":
             return self.SERVICE.GetCompositeIndicesByEdgeLabel(self.REQUEST)
+        else:
+            raise ValueError(f"Invalid element_to_index parameter. "
+                             f"Expecting VertexLabel/EdgeLabel for {self.element_to_index}")
+
+    def get_all_indices(self):
+        self.__are_required_parameters_set__(self.GET_OPERATION_PARAMS)
+
+        self.create_get_all_indices_request()
+
+        if self.element_to_index == "VertexLabel":
+            return self.SERVICE.GetCompositeIndicesForVertex(self.REQUEST)
+        elif self.element_to_index == "EdgeLabel":
+            return self.SERVICE.GetCompositeIndicesForEdge(self.REQUEST)
         else:
             raise ValueError(f"Invalid element_to_index parameter. "
                              f"Expecting VertexLabel/EdgeLabel for {self.element_to_index}")
@@ -440,12 +466,13 @@ class Vertex(GraphElement):
 
             if isinstance(self.OPTIONAL_OPERATOR, GraphIndexer):
                 if self.element_label == "ALL":
-                    raise NotImplementedError("Not yet implemented GET operation on index with ALL VertexLabel. TODO")
-                    pass
+                    indexer = self.OPTIONAL_OPERATOR.get_indexer()
+                    return indexer.get_all_indices()
+
                 else:
                     indexer = self.OPTIONAL_OPERATOR.get_indexer()
+                    return indexer.get_indices_by_label()
 
-                    return indexer.get_index()
             else:
                 raise NotImplementedError("Not implemented GET method for GraphAdder instance. "
                                           "Because logically different")
@@ -525,12 +552,13 @@ class Edge(GraphElement):
 
             if isinstance(self.OPTIONAL_OPERATOR, GraphIndexer):
                 if self.element_label == "ALL":
-                    raise NotImplementedError("Not yet implemented GET operation on index with ALL EdgeLabel. TODO")
-                    pass
+                    indexer = self.OPTIONAL_OPERATOR.get_indexer()
+                    return indexer.get_all_indices()
+
                 else:
                     indexer = self.OPTIONAL_OPERATOR.get_indexer()
+                    return indexer.get_indices_by_label()
 
-                    return indexer.get_index()
             else:
                 raise NotImplementedError("Not implemented GET method for GraphAdder instance. "
                                           "Because logically different")
