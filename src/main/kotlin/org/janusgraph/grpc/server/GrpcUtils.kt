@@ -1,5 +1,6 @@
 package org.janusgraph.grpc.server
 
+import com.google.protobuf.Field
 import com.google.protobuf.Int64Value
 import org.apache.tinkerpop.gremlin.structure.Element
 import org.janusgraph.core.Cardinality
@@ -68,6 +69,17 @@ internal fun convertJavaClassToCardinality(cardinality: Cardinality): VertexProp
         Cardinality.SET -> VertexProperty.Cardinality.Set
     }
 }
+
+internal fun convertMultiplicityToJavaClass(multiplicity: EdgeLabel.Multiplicity): Multiplicity =
+    when (multiplicity) {
+        EdgeLabel.Multiplicity.Simple -> Multiplicity.SIMPLE
+        EdgeLabel.Multiplicity.One2One -> Multiplicity.ONE2ONE
+        EdgeLabel.Multiplicity.One2Many -> Multiplicity.ONE2MANY
+        EdgeLabel.Multiplicity.Multi -> Multiplicity.MULTI
+        EdgeLabel.Multiplicity.Many2One -> Multiplicity.MANY2ONE
+        EdgeLabel.Multiplicity.UNRECOGNIZED -> TODO()
+    }
+
 
 internal fun convertJavaClassMultiplicity(multiplicity: Multiplicity): EdgeLabel.Multiplicity? {
     return when (multiplicity) {

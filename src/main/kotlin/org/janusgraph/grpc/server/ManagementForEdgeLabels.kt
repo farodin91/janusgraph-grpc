@@ -53,7 +53,7 @@ class ManagementForEdgeLabels : IManagementForEdgeLabels {
                 val edgeLabelMaker = management.makeEdgeLabel(name)
 
                 if (requestLabel.multiplicity != null)
-                    edgeLabelMaker.multiplicity(Multiplicity.valueOf(requestLabel.multiplicity.toString()))
+                    edgeLabelMaker.multiplicity(convertMultiplicityToJavaClass(requestLabel.multiplicity))
 
                 if (requestLabel.directed != null) {
                     if (requestLabel.directed)
