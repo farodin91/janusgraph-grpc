@@ -40,7 +40,7 @@ class Edge(GraphElement):
                 self.REQUEST = management_pb2.GetEdgeLabelsByNameRequest(context=self.CONTEXT, name=self.element_label)
         else:
             if self.element_label is not "ALL":
-                self.REQUEST = management_pb2.EnsureEdgeLabelRequest(context=self.CONTEXT, label=self.element_label)
+                self.REQUEST = management_pb2.EnsureEdgeLabelRequest(context=self.CONTEXT, label=self.ELEMENT)
             else:
                 raise NotImplementedError("Implemented PUT operation on VertexLabel when "
                                           "a vertexLabel name is provided not when ALL")
@@ -76,10 +76,11 @@ class Edge(GraphElement):
         self.__generate_request__()
         if self.OPTIONAL_METADATA is None:
             return self.service.EnsureEdgeLabel(self.REQUEST)
-        else:
-            self.OPTIONAL_OPERATOR.set_context(self.CONTEXT)
 
+        else:
             if isinstance(self.OPTIONAL_OPERATOR, GraphIndexer):
+                self.OPTIONAL_OPERATOR.set_context(self.CONTEXT)
+
                 if self.element_label == "ALL":
                     raise NotImplementedError("Not yet implemented PUT operation on index with ALL EdgeLabel. TODO")
                     pass

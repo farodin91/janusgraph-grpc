@@ -4,6 +4,7 @@ import com.google.protobuf.Int64Value
 import org.apache.tinkerpop.gremlin.structure.Element
 import org.janusgraph.core.Cardinality
 import org.janusgraph.core.JanusGraphVertex
+import org.janusgraph.core.Multiplicity
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.attribute.Geoshape
 import org.janusgraph.graphdb.internal.JanusGraphSchemaCategory
@@ -68,6 +69,16 @@ internal fun convertJavaClassToCardinality(cardinality: Cardinality): VertexProp
     }
 }
 
+internal fun convertJavaClassMultiplicity(multiplicity: Multiplicity): EdgeLabel.Multiplicity? {
+    return when (multiplicity) {
+        Multiplicity.MANY2ONE -> EdgeLabel.Multiplicity.Many2One
+        Multiplicity.MULTI -> EdgeLabel.Multiplicity.Multi
+        Multiplicity.ONE2MANY -> EdgeLabel.Multiplicity.One2Many
+        Multiplicity.ONE2ONE -> EdgeLabel.Multiplicity.One2One
+        Multiplicity.SIMPLE -> EdgeLabel.Multiplicity.Simple
+    }
+}
+
 internal fun createVertexPropertyProto(property: PropertyKey): VertexProperty =
     VertexProperty.newBuilder()
         .setId(Int64Value.of(property.longId()))
@@ -96,6 +107,8 @@ internal fun createEdgeLabelProto(edgeLabel: org.janusgraph.core.EdgeLabel, prop
         .setId(Int64Value.of(edgeLabel.longId()))
         .setName(edgeLabel.name())
         .addAllProperties(properties.map { createEdgePropertyProto(it) })
+        .setMultiplicity(convertJavaClassMultiplicity(edgeLabel.multiplicity()))
+        .setDirected(edgeLabel.isDirected)
         .build()
 
 internal fun getGraphIndices(tx: StandardJanusGraphTx, clazz: Class<out Element>): List<IndexType> =

@@ -80,11 +80,12 @@ message EdgeLabel {
     google.protobuf.Int64Value id = 1;
     string name = 2;
     repeated EdgeProperty properties = 3;
+    bool directed = 4;
     enum Direction {
         BOTH = 0;
         OUT = 1;
     }
-    Direction direction = 4;
+    Direction direction = 5;
     enum Multiplicity {
         Multi = 0;
         Simple = 1;
@@ -92,7 +93,7 @@ message EdgeLabel {
         Many2One = 3;
         One2One = 4;
     }
-    Multiplicity multiplicity = 5;
+    Multiplicity multiplicity = 6;
 }
 
 message GetEdgeLabelsByNameRequest {

@@ -79,9 +79,9 @@ class Vertex(GraphElement):
             return self.service.EnsureVertexLabel(self.REQUEST)
 
         else:
-            self.OPTIONAL_OPERATOR.set_context(self.CONTEXT)
-
             if isinstance(self.OPTIONAL_OPERATOR, GraphIndexer):
+                self.OPTIONAL_OPERATOR.set_context(self.CONTEXT)
+
                 if self.element_label == "ALL":
                     raise NotImplementedError("Not yet implemented PUT operation on index with ALL VertexLabel. TODO")
                     pass

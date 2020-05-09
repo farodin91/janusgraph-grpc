@@ -3,6 +3,7 @@ package org.janusgraph.grpc.server
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.janusgraph.core.Cardinality
+import org.janusgraph.core.Multiplicity
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.schema.JanusGraphManagement
 import org.janusgraph.graphdb.database.StandardJanusGraph
@@ -42,18 +43,29 @@ class ManagementForEdgeLabels : IManagementForEdgeLabels {
     override fun ensureEdgeLabel(management: JanusGraphManagement, requestLabel: EdgeLabel): EdgeLabel? {
         val label = getEdgeLabel(management, requestLabel)
         val name = requestLabel.name ?: throw NullPointerException("name should not be null")
-        val vertexLabel = when {
+        val edgeLabel = when {
             label?.name() == name -> label
             label != null -> {
                 management.changeName(label, name)
                 label
             }
             else -> {
-                management.makeEdgeLabel(name).make()
+                val edgeLabelMaker = management.makeEdgeLabel(name)
+
+                if (requestLabel.multiplicity != null)
+                    edgeLabelMaker.multiplicity(Multiplicity.valueOf(requestLabel.multiplicity.toString()))
+
+                if (requestLabel.directed != null) {
+                    if (requestLabel.directed)
+                        edgeLabelMaker.directed()
+                    else
+                        edgeLabelMaker.unidirected()
+                }
+                edgeLabelMaker.make()
             }
         }
-        val properties = requestLabel.propertiesList.map { getOrCreateEdgeProperty(management, vertexLabel, it) }
-        val response = createEdgeLabelProto(vertexLabel, properties)
+        val properties = requestLabel.propertiesList.map { getOrCreateEdgeProperty(management, edgeLabel, it) }
+        val response = createEdgeLabelProto(edgeLabel, properties)
         management.commit()
         return response
     }

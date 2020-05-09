@@ -66,7 +66,8 @@ class GraphElementAdder:
                             vp = []
                             for prop in value:
                                 vp.append(management_pb2.VertexProperty(name=prop))
-                        self.ELEMENT.properties = vp
+
+                        self.ELEMENT.properties.extend(vp)
 
                     else:
                         if isinstance(value, str):
@@ -75,18 +76,23 @@ class GraphElementAdder:
                             ep = []
                             for prop in value:
                                 ep.append(management_pb2.EdgeProperty(name=prop))
-                        self.ELEMENT.properties = ep
+
+                        self.ELEMENT.properties.extend(ep)
 
                 elif property_name == "multiplicity":
-                    raise NotImplementedError("Not implemented custom multiplicity for Edges PUT request")
+                    self.ELEMENT.multiplicity = management_pb2.EdgeLabel.Multiplicity.Value(value)
+
+                elif property_name == "directed":
+                    self.ELEMENT.directed = value if isinstance(value, bool) else (True if value.lower() == "true" else False)
+
                 elif property_name == "direction":
                     raise NotImplementedError("Not implemented custom direction for Edges PUT request")
 
                 elif property_name == "readOnly":
-                    self.ELEMENT.readOnly = value if isinstance(value, bool) else (True if value == "true" else False)
+                    self.ELEMENT.readOnly = value if isinstance(value, bool) else (True if value.lower() == "true" else False)
 
                 elif property_name == "partitioned":
-                    self.ELEMENT.partitioned = value if isinstance(value, bool) else (True if value == "true" else False)
+                    self.ELEMENT.partitioned = value if isinstance(value, bool) else (True if value.lower() == "true" else False)
 
                 else:
                     raise ValueError(f"Expecting the keys to be either of {self.supported_parameters} "
