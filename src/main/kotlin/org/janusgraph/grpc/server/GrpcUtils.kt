@@ -2,6 +2,7 @@ package org.janusgraph.grpc.server
 
 import com.google.protobuf.Field
 import com.google.protobuf.Int64Value
+import com.sun.org.apache.xpath.internal.operations.Bool
 import org.apache.tinkerpop.gremlin.structure.Element
 import org.janusgraph.core.Cardinality
 import org.janusgraph.core.JanusGraphVertex
@@ -80,6 +81,20 @@ internal fun convertMultiplicityToJavaClass(multiplicity: EdgeLabel.Multiplicity
         EdgeLabel.Multiplicity.UNRECOGNIZED -> TODO()
     }
 
+internal fun convertDirectedToBool(directed: EdgeLabel.Directed): Boolean =
+    when (directed) {
+        EdgeLabel.Directed.undirected_edge -> false
+        EdgeLabel.Directed.directed_edge -> true
+        EdgeLabel.Directed.UNRECOGNIZED -> TODO()
+    }
+
+internal fun convertBooleanDirectedToDirected(directedStatus: Boolean): EdgeLabel.Directed {
+    print("Is directed edge ? $directedStatus")
+    return when (directedStatus) {
+        true -> EdgeLabel.Directed.directed_edge
+        false -> EdgeLabel.Directed.undirected_edge
+    }
+}
 
 internal fun convertJavaClassMultiplicity(multiplicity: Multiplicity): EdgeLabel.Multiplicity? {
     return when (multiplicity) {
@@ -120,7 +135,7 @@ internal fun createEdgeLabelProto(edgeLabel: org.janusgraph.core.EdgeLabel, prop
         .setName(edgeLabel.name())
         .addAllProperties(properties.map { createEdgePropertyProto(it) })
         .setMultiplicity(convertJavaClassMultiplicity(edgeLabel.multiplicity()))
-        .setDirected(edgeLabel.isDirected)
+        .setDirected(convertBooleanDirectedToDirected(edgeLabel.isDirected))
         .build()
 
 internal fun getGraphIndices(tx: StandardJanusGraphTx, clazz: Class<out Element>): List<IndexType> =

@@ -10,12 +10,13 @@ class GraphElementAdder:
     ELEMENT = None
     element_to_update = None
 
-    supported_parameters = ["properties", "readOnly", "partitioned", "direction", "multiplicity"]
+    supported_parameters = ["properties", "readOnly", "partitioned", "direction", "multiplicity", "directed"]
 
     def __init__(self, **kwargs):
         self.properties = None
         self.readOnly = None
         self.partitioned = None
+        self.directed = None
         self.direction = None
         self.multiplicity = None
 
@@ -83,7 +84,13 @@ class GraphElementAdder:
                     self.ELEMENT.multiplicity = management_pb2.EdgeLabel.Multiplicity.Value(value)
 
                 elif property_name == "directed":
-                    self.ELEMENT.directed = value if isinstance(value, bool) else (True if value.lower() == "true" else False)
+                    directed = value if isinstance(value, bool) else (True if value.lower() == "true" else False)
+                    # print(value, directed)
+                    # exit(-1)
+                    if directed:
+                        self.ELEMENT.directed = management_pb2.EdgeLabel.Directed.Value("directed_edge")
+                    else:
+                        self.ELEMENT.directed = management_pb2.EdgeLabel.Directed.Value("undirected_edge")
 
                 elif property_name == "direction":
                     raise NotImplementedError("Not implemented custom direction for Edges PUT request")

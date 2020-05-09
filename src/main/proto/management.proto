@@ -80,7 +80,11 @@ message EdgeLabel {
     google.protobuf.Int64Value id = 1;
     string name = 2;
     repeated EdgeProperty properties = 3;
-    bool directed = 4;
+    enum Directed {
+        directed_edge = 0;
+        undirected_edge = 1;
+    }
+    Directed directed = 4;
     enum Direction {
         BOTH = 0;
         OUT = 1;

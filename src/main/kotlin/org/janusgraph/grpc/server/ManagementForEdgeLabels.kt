@@ -56,16 +56,19 @@ class ManagementForEdgeLabels : IManagementForEdgeLabels {
                     edgeLabelMaker.multiplicity(convertMultiplicityToJavaClass(requestLabel.multiplicity))
 
                 if (requestLabel.directed != null) {
-                    if (requestLabel.directed)
+                    if (convertDirectedToBool(requestLabel.directed))
                         edgeLabelMaker.directed()
                     else
                         edgeLabelMaker.unidirected()
                 }
+
+                print("Creating edge label with name " + name + " and multiplicity " + requestLabel.multiplicity.toString() + " and directed " + requestLabel.directed.toString())
                 edgeLabelMaker.make()
             }
         }
         val properties = requestLabel.propertiesList.map { getOrCreateEdgeProperty(management, edgeLabel, it) }
         val response = createEdgeLabelProto(edgeLabel, properties)
+        print("Edge Label" + edgeLabel.name() + " and directed ? : " + edgeLabel.isDirected.toString() + " and multiplicity ? :" + edgeLabel.multiplicity().toString())
         management.commit()
         return response
     }

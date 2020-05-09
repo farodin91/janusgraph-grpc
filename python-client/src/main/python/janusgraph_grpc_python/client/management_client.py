@@ -57,7 +57,8 @@ if __name__ == '__main__':
     print(50*"-")
     if isinstance(response_it, Iterable):
         for resp in response_it:
-            print(switcher(str(processor), resp))
+            # print(switcher(str(processor), resp))
+            print(resp)
 
     else:
         print(response_it)
