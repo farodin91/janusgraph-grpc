@@ -2,15 +2,19 @@ package org.janusgraph.grpc.server
 
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.apache.tinkerpop.gremlin.structure.Vertex
+import org.janusgraph.core.Cardinality
+import org.janusgraph.core.Multiplicity
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.schema.JanusGraphManagement
 import org.janusgraph.graphdb.database.StandardJanusGraph
 import org.janusgraph.graphdb.transaction.StandardJanusGraphTx
+import org.janusgraph.graphdb.types.CompositeIndexType
+import org.janusgraph.graphdb.types.MixedIndexType
 import org.janusgraph.grpc.*
 import java.lang.NullPointerException
 
 
-class ManagementForEdgeLabels: IManagementForEdgeLabels {
+class ManagementForEdgeLabels : IManagementForEdgeLabels {
 
     override fun getEdgeLabelsByName(management: JanusGraphManagement, name: String): List<EdgeLabel> {
         val edgeLabel = management.getEdgeLabel(name) ?: return emptyList()
@@ -39,18 +43,32 @@ class ManagementForEdgeLabels: IManagementForEdgeLabels {
     override fun ensureEdgeLabel(management: JanusGraphManagement, requestLabel: EdgeLabel): EdgeLabel? {
         val label = getEdgeLabel(management, requestLabel)
         val name = requestLabel.name ?: throw NullPointerException("name should not be null")
-        val vertexLabel = when {
+        val edgeLabel = when {
             label?.name() == name -> label
             label != null -> {
                 management.changeName(label, name)
                 label
             }
             else -> {
-                management.makeEdgeLabel(name).make()
+                val edgeLabelMaker = management.makeEdgeLabel(name)
+
+                if (requestLabel.multiplicity != null)
+                    edgeLabelMaker.multiplicity(convertMultiplicityToJavaClass(requestLabel.multiplicity))
+
+                if (requestLabel.directed != null) {
+                    if (convertDirectedToBool(requestLabel.directed))
+                        edgeLabelMaker.directed()
+                    else
+                        edgeLabelMaker.unidirected()
+                }
+
+                print("Creating edge label with name " + name + " and multiplicity " + requestLabel.multiplicity.toString() + " and directed " + requestLabel.directed.toString())
+                edgeLabelMaker.make()
             }
         }
-        val properties = requestLabel.propertiesList.map { getOrCreateEdgeProperty(management, vertexLabel, it) }
-        val response = createEdgeLabelProto(vertexLabel, properties)
+        val properties = requestLabel.propertiesList.map { getOrCreateEdgeProperty(management, edgeLabel, it) }
+        val response = createEdgeLabelProto(edgeLabel, properties)
+        print("Edge Label" + edgeLabel.name() + " and directed ? : " + edgeLabel.isDirected.toString() + " and multiplicity ? :" + edgeLabel.multiplicity().toString())
         management.commit()
         return response
     }
@@ -67,7 +85,7 @@ class ManagementForEdgeLabels: IManagementForEdgeLabels {
                 .make()
 
         val connections = label.mappedProperties()
-        if (!connections.contains(propertyKey)){
+        if (!connections.contains(propertyKey)) {
             management.addProperties(label, propertyKey)
         }
         return propertyKey
@@ -116,12 +134,72 @@ class ManagementForEdgeLabels: IManagementForEdgeLabels {
         val label = getEdgeLabelTx(tx, requestLabel)
         val graphIndexes = getGraphIndices(tx, Edge::class.java)
         val indices = graphIndexes
-            .filter { it.isCompositeIndex }
+            .filterIsInstance<CompositeIndexType>()
             .filter { it.schemaTypeConstraint == label }
             .map {
                 CompositeEdgeIndex.newBuilder()
                     .setName(it.name)
-                    .addProperties(EdgeProperty.getDefaultInstance())
+                    .addAllProperties(it.fieldKeys.map { property -> createEdgePropertyProto(property.fieldKey) })
+                    .build()
+            }
+        tx.rollback()
+        return indices
+    }
+
+    override fun getCompositeIndicesForEdge(
+        graph: StandardJanusGraph
+    ): List<CompositeEdgeIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val graphIndexes = getGraphIndices(tx, Edge::class.java)
+        val indices = graphIndexes
+            .filterIsInstance<CompositeIndexType>()
+            .map {
+                CompositeEdgeIndex.newBuilder()
+                    .setName(it.name)
+                    .addAllProperties(it.fieldKeys.map { property -> createEdgePropertyProto(property.fieldKey) })
+                    .build()
+            }
+        tx.rollback()
+        return indices
+    }
+
+    override fun ensureMixedIndexByEdgeLabel(
+        management: JanusGraphManagement,
+        requestLabel: EdgeLabel,
+        requestIndex: MixedEdgeIndex
+    ): MixedEdgeIndex? {
+        val label = getEdgeLabel(management, requestLabel) ?: throw NullPointerException("vertex should exists")
+
+        val keys = requestIndex.propertiesList.map { management.getPropertyKey(it.name) }
+        val builder = management.buildIndex(requestIndex.name, Edge::class.java)
+            .indexOnly(label)
+
+        keys.forEach { builder.addKey(it) }
+
+        val graphIndex = builder.buildMixedIndex(requestIndex.backend)
+        val properties = graphIndex.fieldKeys.map { createEdgePropertyProto(it) }
+
+        val compositeIndex = MixedEdgeIndex.newBuilder()
+            .setName(graphIndex.name())
+            .addAllProperties(properties)
+            .setBackend(graphIndex.backingIndex)
+            .build()
+        management.commit()
+        return compositeIndex
+    }
+
+    override fun getMixedIndicesByEdgeLabel(graph: StandardJanusGraph, requestLabel: EdgeLabel): List<MixedEdgeIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val label = getEdgeLabelTx(tx, requestLabel)
+        val graphIndexes = getGraphIndices(tx, Edge::class.java)
+        val indices = graphIndexes
+            .filterIsInstance<MixedIndexType>()
+            .filter { it.schemaTypeConstraint == label }
+            .map {
+                MixedEdgeIndex.newBuilder()
+                    .setName(it.name)
+                    .addAllProperties(it.fieldKeys.map { property -> createEdgePropertyProto(property.fieldKey) })
+                    .setBackend(it.backingIndexName)
                     .build()
             }
         tx.rollback()

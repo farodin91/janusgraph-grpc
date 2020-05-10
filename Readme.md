@@ -10,7 +10,7 @@
 7. Remove `./lib/protobuf-java-2.5.0.jar`
 7. Execute `./bin/janusgraph-server.sh`
 8. Now you are ready to go (You have a running janusgraph instance with a gRPC server on port 10182 and a gremlin server on port 8128 as normal.)
-9. Client test: `cd client && cargo run -- --host 127.0.0.1 list vertexLabel`(client just can list vertexlabels)
+9. Client test: `cd client && cargo run -- --host 127.0.0.1 vertex-label list`(client just can list vertexlabels)
 
 ## Current State of a test Client
 
@@ -33,15 +33,16 @@ Not started yet.
         * [x] multiple properties
     * [x] composite indices
         * [x] name
-        * [ ] properties
-        * [ ] unique
+        * [x] properties
+        * [x] unique
+        * [x] multiple properties
         * [ ] multiple indices
         * [ ] status
-    * [ ] mixed indices
-        * [ ] name
-        * [ ] properties
-        * [ ] unique
-        * [ ] backend (different)
+    * [x] mixed indices
+        * [x] name
+        * [x] backend
+        * [x] properties
+        * [x] multiple properties
         * [ ] multiple indices
         * [ ] status
 * [x] Get Vertices
@@ -68,13 +69,16 @@ Not started yet.
     * [x] composite indices
         * [x] name
         * [x] properties
-        * [ ] unique
+        * [x] unique
+        * [x] multiple properties
+        * [ ] ensure properties are part of vertex
         * [ ] multiple indices
-    * [ ] mixed indices
-        * [ ] name
-        * [ ] properties
-        * [ ] unique
-        * [ ] backend (different)
+    * [x] mixed indices
+        * [x] name
+        * [x] backend
+        * [x] properties
+        * [x] multiple properties
+        * [ ] ensure properties are part of vertex
         * [ ] multiple indices
 * [x] Ensure Vertices (update)
     * [x] id
@@ -90,13 +94,14 @@ Not started yet.
         * [ ] name
         * [ ] properties
         * [ ] multiple indices
+        * [ ] multiple properties
         * [ ] unique
     * [ ] mixed indices
         * [ ] name
+        * [ ] backend
         * [ ] properties
         * [ ] multiple indices
-        * [ ] unique
-        * [ ] backend
+        * [ ] multiple properties
 
 ### Edges
 
@@ -111,15 +116,15 @@ Not started yet.
         * [ ] multiple properties
     * [x] composite indices
         * [x] name
-        * [ ] properties
+        * [x] properties
+        * [x] multiple properties
         * [ ] multiple indices
-        * [ ] unique
-    * [ ] mixed indices
-        * [ ] name
-        * [ ] properties
+    * [x] mixed indices
+        * [x] name
+        * [x] backend
+        * [x] properties
+        * [x] multiple properties
         * [ ] multiple indices
-        * [ ] unique
-        * [ ] backend
 * [x] Get Edges
     * [x] id
     * [x] name
@@ -140,14 +145,16 @@ Not started yet.
     * [x] composite indices
         * [x] name
         * [x] properties
+        * [x] multiple properties
+        * [ ] ensure properties are part of vertex
         * [ ] multiple indices
-        * [ ] unique
-    * [ ] mixed indices
-        * [ ] name
-        * [ ] properties
+    * [x] mixed indices
+        * [x] name
+        * [x] backend
+        * [x] properties
+        * [x] multiple properties
+        * [ ] ensure properties are part of vertex
         * [ ] multiple indices
-        * [ ] unique
-        * [ ] backend
 * [x] Ensure Edges (update)
     * [x] name
     * [ ] direction
@@ -159,13 +166,15 @@ Not started yet.
     * [ ] composite indices
         * [ ] name
         * [ ] properties
+        * [ ] multiple properties
+        * [ ] ensure properties are part of vertex
         * [ ] multiple indices
-        * [ ] unique
     * [ ] mixed indices
         * [ ] name
         * [ ] properties
+        * [ ] multiple properties
+        * [ ] ensure properties are part of vertex
         * [ ] multiple indices
-        * [ ] unique
         * [ ] backend
 
 ### Indices
@@ -178,10 +187,10 @@ Not started yet.
 ### Instances
 
 * [ ] Management Instances (status, config, close)
-* [ ] global Configuration
+* [ ] Global Configuration
 * [x] Get a list of contexts
-    * [ ] name
-    * [ ] basic infos (storage backend, host, configuredGraphFactory)
+    * [x] name
+    * [ ] basic infos (storage backend, index backend, host, configuredGraphFactory)
 
 ### Integrations 
 

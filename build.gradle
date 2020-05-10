@@ -28,7 +28,8 @@ dependencies {
     implementation "io.grpc:grpc-stub:${grpcVersion}"
     implementation group: "org.apache.tinkerpop", name: "gremlin-server", version: tinkerpopVersion
     implementation group: "org.janusgraph", name: "janusgraph-core", version: janusGraphVersion
-    implementation group: "org.janusgraph", name: "janusgraph-inmemory", version: janusGraphVersion
+    testImplementation group: "org.janusgraph", name: "janusgraph-inmemory", version: janusGraphVersion
+    testImplementation group: "org.janusgraph", name: "janusgraph-lucene", version: janusGraphVersion
     testImplementation("org.junit.jupiter:junit-jupiter:5.6.1")
 }
 
