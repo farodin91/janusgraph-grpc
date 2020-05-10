@@ -1,9 +1,12 @@
 package org.janusgraph.grpc.server
 
+import com.google.protobuf.Field
 import com.google.protobuf.Int64Value
+import com.sun.org.apache.xpath.internal.operations.Bool
 import org.apache.tinkerpop.gremlin.structure.Element
 import org.janusgraph.core.Cardinality
 import org.janusgraph.core.JanusGraphVertex
+import org.janusgraph.core.Multiplicity
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.attribute.Geoshape
 import org.janusgraph.graphdb.internal.JanusGraphSchemaCategory
@@ -68,6 +71,41 @@ internal fun convertJavaClassToCardinality(cardinality: Cardinality): VertexProp
     }
 }
 
+internal fun convertMultiplicityToJavaClass(multiplicity: EdgeLabel.Multiplicity): Multiplicity =
+    when (multiplicity) {
+        EdgeLabel.Multiplicity.Simple -> Multiplicity.SIMPLE
+        EdgeLabel.Multiplicity.One2One -> Multiplicity.ONE2ONE
+        EdgeLabel.Multiplicity.One2Many -> Multiplicity.ONE2MANY
+        EdgeLabel.Multiplicity.Multi -> Multiplicity.MULTI
+        EdgeLabel.Multiplicity.Many2One -> Multiplicity.MANY2ONE
+        EdgeLabel.Multiplicity.UNRECOGNIZED -> TODO()
+    }
+
+internal fun convertDirectedToBool(directed: EdgeLabel.Directed): Boolean =
+    when (directed) {
+        EdgeLabel.Directed.undirected_edge -> false
+        EdgeLabel.Directed.directed_edge -> true
+        EdgeLabel.Directed.UNRECOGNIZED -> TODO()
+    }
+
+internal fun convertBooleanDirectedToDirected(directedStatus: Boolean): EdgeLabel.Directed {
+    print("Is directed edge ? $directedStatus")
+    return when (directedStatus) {
+        true -> EdgeLabel.Directed.directed_edge
+        false -> EdgeLabel.Directed.undirected_edge
+    }
+}
+
+internal fun convertJavaClassMultiplicity(multiplicity: Multiplicity): EdgeLabel.Multiplicity? {
+    return when (multiplicity) {
+        Multiplicity.MANY2ONE -> EdgeLabel.Multiplicity.Many2One
+        Multiplicity.MULTI -> EdgeLabel.Multiplicity.Multi
+        Multiplicity.ONE2MANY -> EdgeLabel.Multiplicity.One2Many
+        Multiplicity.ONE2ONE -> EdgeLabel.Multiplicity.One2One
+        Multiplicity.SIMPLE -> EdgeLabel.Multiplicity.Simple
+    }
+}
+
 internal fun createVertexPropertyProto(property: PropertyKey): VertexProperty =
     VertexProperty.newBuilder()
         .setId(Int64Value.of(property.longId()))
@@ -96,6 +134,8 @@ internal fun createEdgeLabelProto(edgeLabel: org.janusgraph.core.EdgeLabel, prop
         .setId(Int64Value.of(edgeLabel.longId()))
         .setName(edgeLabel.name())
         .addAllProperties(properties.map { createEdgePropertyProto(it) })
+        .setMultiplicity(convertJavaClassMultiplicity(edgeLabel.multiplicity()))
+        .setDirected(convertBooleanDirectedToDirected(edgeLabel.isDirected))
         .build()
 
 internal fun getGraphIndices(tx: StandardJanusGraphTx, clazz: Class<out Element>): List<IndexType> =

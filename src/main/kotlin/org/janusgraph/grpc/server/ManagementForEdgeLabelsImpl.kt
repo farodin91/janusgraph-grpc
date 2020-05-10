@@ -70,4 +70,18 @@ class ManagementForEdgeLabelsImpl(
         indices.forEach { responseObserver?.onNext(it) }
         responseObserver?.onCompleted()
     }
+
+    override fun getCompositeIndicesForEdge(
+        request: GetCompositeIndicesForEdgeRequest,
+        responseObserver: StreamObserver<CompositeEdgeIndex>?
+    ) {
+        val graph = contextManager.getGraph(request?.context)
+        if (graph == null) {
+            responseObserver?.onError(Throwable("Incorrect context"))
+            return
+        }
+        val indices = managementServer.getCompositeIndicesForEdge(graph)
+        indices.forEach { responseObserver?.onNext(it) }
+        responseObserver?.onCompleted()
+    }
 }

@@ -43,6 +43,7 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
             management.vertexLabels.first { it.longId() == label.id.value }
                 ?: throw IllegalArgumentException("No vertexLabel found with id")
         } else {
+            print("I'm retrieving vertex label with name " + label.name)
             management.getVertexLabel(label.name)
         }
 
@@ -138,6 +139,24 @@ class ManagementForVertexLabels : IManagementForVertexLabels {
         val indices = graphIndexes
             .filterIsInstance<CompositeIndexType>()
             .filter { it.schemaTypeConstraint == label }
+            .map {
+                CompositeVertexIndex.newBuilder()
+                    .setName(it.name)
+                    .addAllProperties(it.fieldKeys.map { property -> createVertexPropertyProto(property.fieldKey) })
+                    .setUnique(it.cardinality == Cardinality.SINGLE)
+                    .build()
+            }
+        tx.rollback()
+        return indices
+    }
+
+    override fun getCompositeIndicesForVertex(
+        graph: StandardJanusGraph
+    ): List<CompositeVertexIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val graphIndexes = getGraphIndices(tx, Vertex::class.java)
+        val indices = graphIndexes
+            .filterIsInstance<CompositeIndexType>()
             .map {
                 CompositeVertexIndex.newBuilder()
                     .setName(it.name)

@@ -3,6 +3,7 @@ package org.janusgraph.grpc.server
 import org.apache.tinkerpop.gremlin.structure.Edge
 import org.apache.tinkerpop.gremlin.structure.Vertex
 import org.janusgraph.core.Cardinality
+import org.janusgraph.core.Multiplicity
 import org.janusgraph.core.PropertyKey
 import org.janusgraph.core.schema.JanusGraphManagement
 import org.janusgraph.graphdb.database.StandardJanusGraph
@@ -42,18 +43,32 @@ class ManagementForEdgeLabels : IManagementForEdgeLabels {
     override fun ensureEdgeLabel(management: JanusGraphManagement, requestLabel: EdgeLabel): EdgeLabel? {
         val label = getEdgeLabel(management, requestLabel)
         val name = requestLabel.name ?: throw NullPointerException("name should not be null")
-        val vertexLabel = when {
+        val edgeLabel = when {
             label?.name() == name -> label
             label != null -> {
                 management.changeName(label, name)
                 label
             }
             else -> {
-                management.makeEdgeLabel(name).make()
+                val edgeLabelMaker = management.makeEdgeLabel(name)
+
+                if (requestLabel.multiplicity != null)
+                    edgeLabelMaker.multiplicity(convertMultiplicityToJavaClass(requestLabel.multiplicity))
+
+                if (requestLabel.directed != null) {
+                    if (convertDirectedToBool(requestLabel.directed))
+                        edgeLabelMaker.directed()
+                    else
+                        edgeLabelMaker.unidirected()
+                }
+
+                print("Creating edge label with name " + name + " and multiplicity " + requestLabel.multiplicity.toString() + " and directed " + requestLabel.directed.toString())
+                edgeLabelMaker.make()
             }
         }
-        val properties = requestLabel.propertiesList.map { getOrCreateEdgeProperty(management, vertexLabel, it) }
-        val response = createEdgeLabelProto(vertexLabel, properties)
+        val properties = requestLabel.propertiesList.map { getOrCreateEdgeProperty(management, edgeLabel, it) }
+        val response = createEdgeLabelProto(edgeLabel, properties)
+        print("Edge Label" + edgeLabel.name() + " and directed ? : " + edgeLabel.isDirected.toString() + " and multiplicity ? :" + edgeLabel.multiplicity().toString())
         management.commit()
         return response
     }
@@ -121,6 +136,23 @@ class ManagementForEdgeLabels : IManagementForEdgeLabels {
         val indices = graphIndexes
             .filterIsInstance<CompositeIndexType>()
             .filter { it.schemaTypeConstraint == label }
+            .map {
+                CompositeEdgeIndex.newBuilder()
+                    .setName(it.name)
+                    .addAllProperties(it.fieldKeys.map { property -> createEdgePropertyProto(property.fieldKey) })
+                    .build()
+            }
+        tx.rollback()
+        return indices
+    }
+
+    override fun getCompositeIndicesForEdge(
+        graph: StandardJanusGraph
+    ): List<CompositeEdgeIndex> {
+        val tx = graph.buildTransaction().disableBatchLoading().start() as StandardJanusGraphTx
+        val graphIndexes = getGraphIndices(tx, Edge::class.java)
+        val indices = graphIndexes
+            .filterIsInstance<CompositeIndexType>()
             .map {
                 CompositeEdgeIndex.newBuilder()
                     .setName(it.name)

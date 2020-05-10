@@ -1,0 +1,38 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/*.*
+*/__pycache__/
+*.py[cod]
+*$py.class
+
+# PyCharm / Git folders
+.idea/
+
+# Script files
+src/main/scripts/
+
+# VS Code folders
+.vscode/
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+nosetests.xml
+coverage.xml
+.pytest_cache/
+
+# PyBuilder
+target/
+.pybuilder/
+
+# node
+node_modules/
+package-lock.json
+
+# pyenv
+.python-version
+
+# Environments
+.env
+
+package-lock.json
+node_modules/*

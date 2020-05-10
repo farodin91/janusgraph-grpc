@@ -5,14 +5,15 @@ grpcServer: {
 }
 channelizer: org.apache.tinkerpop.gremlin.server.channel.WebSocketChannelizer
 graphs: {
-    graph: conf/janusgraph-inmemory.properties
+    graph_inmemory: conf/janusgraph-inmemory.properties,
+    graph_berkleydb: conf/janusgraph-berkleydb.properties
 }
 scriptEngines: {
     gremlin-groovy: {
         plugins: { org.apache.tinkerpop.gremlin.server.jsr223.GremlinServerGremlinPlugin: {},
                    org.apache.tinkerpop.gremlin.tinkergraph.jsr223.TinkerGraphGremlinPlugin: {},
                    org.apache.tinkerpop.gremlin.jsr223.ImportGremlinPlugin: {classImports: [java.lang.Math], methodImports: [java.lang.Math#*]},
-                   org.apache.tinkerpop.gremlin.jsr223.ScriptFileGremlinPlugin: {files: [scripts/empty-sample.groovy]}}}}
+                   org.apache.tinkerpop.gremlin.jsr223.ScriptFileGremlinPlugin: {files: [scripts/multi-graph.groovy]}}}}
 serializers:
     - { className: org.apache.tinkerpop.gremlin.driver.ser.GryoMessageSerializerV3d0, config: { serializeResultToString: true }}
 processors:
