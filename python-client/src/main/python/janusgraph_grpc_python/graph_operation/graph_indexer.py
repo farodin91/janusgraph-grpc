@@ -116,7 +116,7 @@ class GraphIndexer:
         if not valid_params_passed:
             invalid_param_idx = [i for i, x in enumerate([x in self.supported_parameters
                                                           for x in kwargs.keys()]) if x is False]
-            invalid_params = itemgetter(*invalid_param_idx)(kwargs.keys())
+            invalid_params = itemgetter(*invalid_param_idx)(list(kwargs.keys()))
 
             raise LookupError(f"Invalid parameter passed. The passed parameter {invalid_params} "
                               f"is not part of supported parameter list ${self.supported_parameters}")
@@ -124,6 +124,9 @@ class GraphIndexer:
         if isinstance(self.index_on, dict):
             raise NotImplementedError("Implemented index_on with String attribute only. "
                                       f"TODO for dict with key as propertyKey and value as Mapping parameter. Got {type(self.index_on)}")
+
+        if "unique_index" in kwargs and kwargs["unique_index"] == True:
+            raise NotImplementedError("Not implemented adding property of index_uniqueness to Index yet. TODO")
 
     def __are_required_parameters_set__(self, parameters=None):
         # The compulsory parameters are the ones which are initialized as either None or as empty object
